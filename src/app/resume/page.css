@@ -28,11 +28,14 @@
 }
 
 .resume-version-tile {
+  position: relative;
   width: 100%;
   border: 2px solid transparent;
   border-radius: 8px;
-  padding: 24px 20px;
-  background: #27283b;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap:4px;
   box-shadow: none;
   cursor: pointer;
   text-align: left;
@@ -43,16 +46,9 @@
   box-shadow: 0 16px 26px rgba(0, 0, 0, 0.22);
 }
 
-.resume-version-tile h2 {
-  margin: 0 0 18px;
-  color: #fff;
-  font-weight: 900;
-}
 
 .resume-version-tile p {
-  margin: 12px 0;
   color: #a6a9ba;
-  font-weight: 800;
 }
 
 .resume-version-tile b {

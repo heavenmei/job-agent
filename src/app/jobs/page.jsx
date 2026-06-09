@@ -3,6 +3,7 @@
 import { SearchOutlined, StarFilled } from "@ant-design/icons";
 import { Button, Drawer, Empty, Input, Spin, Switch, Table, Tag } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { AppShell } from "../components/AppShell";
 import ResumeDisplay from "../components/ResumeDisplay";
 
@@ -58,63 +59,72 @@ const sourceCards = [
     name: "国务院国资委",
     type: "国家发布",
     badge: "SASAC",
-    color: "#e82c3a",
+    color: "#d71920",
+    logo: "/image/guozi_logo.png",
   },
   {
     id: "mohrss",
     name: "中国人社部",
     type: "国家发布",
     badge: "人社",
-    color: "#e82c3a",
+    color: "#d71920",
+    logo: "/image/renshe_logo.png",
   },
   {
     id: "official",
     name: "企业官网",
     type: "官方发布",
     badge: "官网",
-    color: "#e82c3a",
+    color: "#4f46c8",
+    logo: "/image/official_logo.png",
   },
   {
     id: "wechat",
     name: "微信公众号",
     type: "官方发布",
     badge: "微",
-    color: "#e82c3a",
+    color: "#07c160",
+    logo: "/image/weixin_logo.png",
   },
   {
     id: "guopin",
     name: "国聘网",
     type: "求职平台",
     badge: "国聘",
-    color: "#e82c3a",
+    color: "#c8102e",
+    logo: "/image/guopin_logo.png",
   },
   {
     id: "boss",
     name: "Boss直聘",
     type: "求职平台",
     badge: "BOSS",
-    color: "#e82c3a",
+    color: "#00b38a",
+    logo: "/image/boss_logo.png",
   },
   {
     id: "job",
     name: "前程无忧",
     type: "求职平台",
     badge: "前程",
-    color: "#e82c3a",
+    color: "#f36f21",
+    logo: "/image/51job_logo.png",
   },
   {
     id: "zhilian",
     name: "智联招聘",
     type: "求职平台",
     badge: "聘",
-    color: "#e82c3a",
+    color: "#1677ff",
+    logo: "/image/zhilian_logo.png",
   },
   {
     id: "liepin",
     name: "猎聘网",
     type: "求职平台",
     badge: "猎聘",
-    color: "#e82c3a",
+    color: "#ff6b00",
+    logo: "/image/liepin_logo.png",
   },
 ];
 
@@ -230,7 +240,7 @@ export default function JobsPage() {
                   className={
                     filters.category === tab.value
                       ? "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-white px-3 text-base font-extrabold text-[#202434]"
-                      : "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-[#eef1f7] px-3 text-base font-extrabold text-[#687085]"
+                      : "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-primary px-3 text-base font-extrabold text-white"
                   }
                   key={tab.value}
                   onClick={() => updateFilter("category", tab.value)}
@@ -278,24 +288,30 @@ export default function JobsPage() {
             <span className="self-center text-center font-bold leading-[1.55] tracking-[4px] text-primary [writing-mode:vertical-rl] max-[1100px]:text-left max-[1100px]:[writing-mode:initial]">
               岗位自动全网搜
             </span>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(224px,1fr))] gap-3">
+            <div className="flex flex-wrap gap-3">
               {sourceCards.map((source) => (
                 <article
-                  className="flex min-h-17.5 items-center gap-3 rounded-lg border border-[#e5e8f1] bg-[#f8f9fd] px-4 py-3"
+                  className="w-54 relative flex items-center justify-between gap-3 overflow-hidden rounded-lg border border-border bg-surface-muted p-3"
                   key={source.id}
                 >
-                  <div
-                    className={`grid h-9 w-9 place-items-center rounded-[7px] text-xs font-black text-white ${
-                      "bg-[" + source.color + "]"
-                    }`}
-                  >
-                    {source.badge}
-                  </div>
-                  <div>
-                    <b className="block">{source.name}</b>
-                    <small className="block text-[#687085]">
-                      {source.type}
-                    </small>
+                  <span
+                    className="absolute left-0 top-0 h-1 w-full"
+                    style={{ backgroundColor: source.color }}
+                  />
+                  <div className="flex gap-2 items-center">
+                    <Image
+                      alt={`${source.name} logo`}
+                      className="h-9 w-9 object-contain"
+                      height={36}
+                      src={source.logo}
+                      width={36}
+                    />
+                    <div>
+                      <b className="block">{source.name}</b>
+                      <small className="block text-[#687085]">
+                        {source.type}
+                      </small>
+                    </div>
                   </div>
                   <Switch
                     className="ml-auto"

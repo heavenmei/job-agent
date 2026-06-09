@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { InboxOutlined, StarFilled } from "@ant-design/icons";
-import { message, Select, Upload } from "antd";
+import { Button, message, Select, Upload } from "antd";
 import ReactMarkdown from "react-markdown";
 import {
+  createInitialResumeItems,
   persistResumeItems,
   readResumeItems,
   setActiveResumeItem,
@@ -14,79 +15,85 @@ import {
 
 const { Dragger } = Upload;
 
-const analysisHighlights = [
-  {
-    number: "01",
-    title: "跨学科复合型人才",
-    description:
-      "你拥有跨学科背景与丰富的AI应用实践，具备数据驱动思维，在产品与人力资源领域展现出较强的综合素质与落地能力",
-  },
-  {
-    number: "02",
-    title: "量身定制9种求职路径",
-    description:
-      "已为你定制9张求职表格：可按专业、央国企、职位、行业等多维度求职",
-  },
-  {
-    number: "03",
-    title: "推荐按照职位找工作",
-    description: "根据你的情况，优先按照职位找工作，更适合你获得合适的工作",
-    featured: true,
-  },
-  {
-    number: "04",
-    title: "7×24 全网监控",
-    description: "AI持续为你监控全网新增岗位，第一时间发现适合你的岗位",
-  },
-];
-
 export default function ResumeDisplay({
+  activeResumeId: controlledActiveResumeId,
   mode = "detail",
+  resumeItems: controlledResumeItems,
   showSelect = true,
   titleNode,
   emptyExtra,
+  onResumeChange,
   onResumeItemChange,
   mdClassName,
   uploadClassName = "flex flex-col w-full",
   uploadHint = "支持 PDF、Docx、Markdown、TXT 等格式",
   uploadText = "上传简历文件",
 }) {
-  const [resumeItems, setResumeItems] = useState(readResumeItems);
+  const [resumeItems, setResumeItems] = useState(createInitialResumeItems);
   const [activeResumeId, setActiveResumeId] = useState(
     () => getActiveResumeItem(resumeItems)?.id
   );
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const effectiveResumeItems = controlledResumeItems || resumeItems;
+  const effectiveActiveResumeId = controlledActiveResumeId || activeResumeId;
 
   const activeResume = useMemo(
     () =>
-      resumeItems.find((item) => item.id === activeResumeId) ||
-      getActiveResumeItem(resumeItems),
-    [activeResumeId, resumeItems]
+      effectiveResumeItems.find((item) => item.id === effectiveActiveResumeId) ||
+      getActiveResumeItem(effectiveResumeItems),
+    [effectiveActiveResumeId, effectiveResumeItems]
   );
   const resume = activeResume?.resume || "";
+  const analysisItems = Array.isArray(activeResume?.highlight)
+    ? activeResume.highlight
+    : [];
   const hasResumeItems =
     showSelect &&
-    (resumeItems.length > 1 || resumeItems.some((item) => item.resume));
+    (effectiveResumeItems.length > 1 ||
+      effectiveResumeItems.some((item) => item.resume));
+
+  useEffect(() => {
+    if (controlledResumeItems) return;
+
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+
+      const storedItems = readResumeItems();
+
+      setResumeItems(storedItems);
+      setActiveResumeId(getActiveResumeItem(storedItems)?.id);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [controlledResumeItems]);
 
   function syncResumeItems(nextItems, nextActiveId) {
     const nextActiveItem =
       nextItems.find((item) => item.id === nextActiveId) || nextItems[0];
 
-    setResumeItems(nextItems);
-    setActiveResumeId(nextActiveId);
+    if (!controlledResumeItems) setResumeItems(nextItems);
+    if (!controlledActiveResumeId) setActiveResumeId(nextActiveId);
     persistResumeItems(nextItems);
+    onResumeChange?.(nextActiveItem?.resume || "");
     onResumeItemChange?.(nextActiveItem, nextItems);
   }
 
   function selectResumeItem(resumeId) {
-    const nextItems = setActiveResumeItem(resumeItems, resumeId);
+    const nextItems = setActiveResumeItem(effectiveResumeItems, resumeId);
 
     syncResumeItems(nextItems, resumeId);
   }
 
   function setResume(value) {
-    const targetItem = activeResume || getActiveResumeItem(resumeItems);
-    const nextItems = updateResumeItem(resumeItems, targetItem.id, {
+    const targetItem = activeResume || getActiveResumeItem(effectiveResumeItems);
+    const nextItems = updateResumeItem(effectiveResumeItems, targetItem.id, {
       resume: value || "",
+      highlight: [],
+      matchAnalysis: {},
     });
 
     syncResumeItems(nextItems, targetItem.id);
@@ -113,6 +120,40 @@ export default function ResumeDisplay({
     },
   };
 
+  async function analyzeResume() {
+    if (!resume.trim()) {
+      message.warning("请先上传或选择一份简历");
+      return;
+    }
+
+    setAnalysisLoading(true);
+
+    try {
+      const response = await fetch("/api/resume/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "简历分析失败");
+      }
+
+      const nextItems = updateResumeItem(effectiveResumeItems, activeResume.id, {
+        highlight: data.highlights || [],
+      });
+
+      syncResumeItems(nextItems, activeResume.id);
+      message.success("简历分析完成");
+    } catch (error) {
+      message.error(error.message || "简历分析失败");
+    } finally {
+      setAnalysisLoading(false);
+    }
+  }
+
   const renderContent = () => {
     if (mode === "detail") {
       return (
@@ -121,15 +162,15 @@ export default function ResumeDisplay({
         </div>
       );
     } else if (mode === "analysis") {
-      return (
+      return analysisItems.length ? (
         <div className="grid grid-cols-4 gap-5 max-[1100px]:grid-cols-2 max-[720px]:grid-cols-1 max-[720px]:gap-3">
-          {analysisHighlights.map((item) => (
+          {analysisItems.map((item, index) => (
             <article
-              className="grid min-h-37 grid-cols-[48px_minmax(0,1fr)] gap-4 rounded-[7px] border border-app-border bg-surface-muted px-5 py-6 max-[720px]:min-h-0 max-[720px]:p-4"
-              key={item.number}
+              className="grid min-h-37 grid-cols-[48px_minmax(0,1fr)] gap-4 rounded-[7px] border border-app-border bg-surface-muted p-4 max-[720px]:min-h-0 max-[720px]:p-4"
+              key={`${item.number}-${item.title}`}
             >
               <span className="grid h-11 w-11 place-items-center rounded-full border border-primary-border bg-primary-soft text-[17px] font-black text-primary">
-                {item.number}
+                {item.number || String(index + 1).padStart(2, "0")}
               </span>
               <div>
                 <h2 className="flex items-center gap-1.5 text-[19px] font-black text-app-fg">
@@ -145,6 +186,16 @@ export default function ResumeDisplay({
             </article>
           ))}
         </div>
+      ) : (
+        <Button
+          block
+          size="large"
+          loading={analysisLoading}
+          onClick={analyzeResume}
+          type="primary"
+        >
+          分析简历
+        </Button>
       );
     }
   };
@@ -155,15 +206,17 @@ export default function ResumeDisplay({
     return (
       <div className="flex justify-between items-center">
         {titleNode}
-        <Select
-          value={activeResume?.id}
-          style={{ width: 180 }}
-          onChange={selectResumeItem}
-          options={resumeItems.map((item) => ({
-            value: item.id,
-            label: item.title || item.version || "未命名简历",
-          }))}
-        />
+        <div className="flex items-center gap-2">
+          <Select
+            value={activeResume?.id}
+            style={{ width: 180 }}
+            onChange={selectResumeItem}
+            options={effectiveResumeItems.map((item) => ({
+              value: item.id,
+              label: item.title || item.version || "未命名简历",
+            }))}
+          />
+        </div>
       </div>
     );
   }
@@ -186,9 +239,8 @@ export default function ResumeDisplay({
       {renderSelect()}
       <div
         className={
-          "min-h-0 flex-1 overflow-auto scrollbar-none " + (resume
-            ? mdClassName
-            : "")
+          "min-h-0 flex-1 overflow-auto scrollbar-none " +
+          (resume ? mdClassName : "")
         }
       >
         {resume ? renderContent() : uploadNode}

@@ -9,13 +9,14 @@ import {
   WarningFilled,
 } from "@ant-design/icons";
 import { Button, Input, Radio } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import ResumeDisplay from "../components/ResumeDisplay";
 import { roles } from "../config";
 import "./page.css";
 import ResumeList from "./resumeList";
 import {
+  createInitialResumeItems,
   getActiveResumeItem,
   persistResumeItems,
   readResumeItems,
@@ -25,7 +26,7 @@ import {
 export default function ResumePage() {
   const [mode, setMode] = useState("general");
   const [stage, setStage] = useState("original");
-  const [resumeItems, setResumeItems] = useState(readResumeItems);
+  const [resumeItems, setResumeItems] = useState(createInitialResumeItems);
   const [activeResumeId, setActiveResumeId] = useState(
     () => getActiveResumeItem(resumeItems)?.id
   );
@@ -44,11 +45,29 @@ export default function ResumePage() {
   const resume = activeResume?.resume || "";
   const role = activeResume?.role || "";
 
+  useEffect(() => {
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+
+      const storedItems = readResumeItems();
+
+      setResumeItems(storedItems);
+      setActiveResumeId(getActiveResumeItem(storedItems)?.id);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function updateActiveResume(updates) {
     const nextItems = updateResumeItem(resumeItems, activeResume.id, updates);
 
     setResumeItems(nextItems);
     persistResumeItems(nextItems);
+    return nextItems;
   }
 
   function setResume(value) {
@@ -67,7 +86,7 @@ export default function ResumePage() {
   return (
     <AppShell>
       <div className="flex gap-4 h-full">
-        <aside className=" flex flex-col min-w-1/5 max-w-1/4 gap-4">
+        <aside className=" flex flex-col min-w-1/6 max-w-1/4 gap-4">
           <ResumeList
             activeResume={activeResume}
             resumeItems={resumeItems}
@@ -96,7 +115,9 @@ export default function ResumePage() {
           <section className="flex-1 flex gap-4 overflow-hidden">
             <div className="flex-1 p-6 bg-surface rounded-2xl overflow-auto scrollbar-none">
               <ResumeDisplay
+                activeResumeId={activeResumeId}
                 onResumeItemChange={syncActiveResume}
+                resumeItems={resumeItems}
                 uploadClassName="flex flex-col"
                 showSelect={false}
                 emptyExtra={

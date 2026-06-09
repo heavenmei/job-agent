@@ -13,14 +13,34 @@ export function createResumeItem(index, resume = "", overrides = {}) {
     role: "",
     updated: getToday(),
     resume,
+    highlight: [],
+    matchAnalysis: {},
     active: index === 1,
     ...overrides,
   };
 }
 
+export function createInitialResumeItem() {
+  return {
+    id: "resume-initial",
+    title: "原始的简历",
+    version: "原始的我",
+    role: "",
+    updated: "",
+    resume: "",
+    highlight: [],
+    matchAnalysis: {},
+    active: true,
+  };
+}
+
+export function createInitialResumeItems() {
+  return [createInitialResumeItem()];
+}
+
 export function normalizeResumeItems(items) {
   const sourceItems =
-    Array.isArray(items) && items.length > 0 ? items : [createResumeItem(1)];
+    Array.isArray(items) && items.length > 0 ? items : createInitialResumeItems();
   const activeIndex = Math.max(
     0,
     sourceItems.findIndex((item) => item.active)
@@ -32,18 +52,38 @@ export function normalizeResumeItems(items) {
     id: item.id || `resume-${index + 1}`,
     active: index === activeIndex,
     resume: item.resume || "",
+    highlight: Array.isArray(item.highlight) ? item.highlight : [],
+    matchAnalysis: normalizeMatchAnalysis(item.matchAnalysis),
   }));
+}
+
+function normalizeMatchAnalysis(matchAnalysis) {
+  if (!matchAnalysis || typeof matchAnalysis !== "object") return {};
+
+  if (matchAnalysis.match && matchAnalysis.dimensions) {
+    return {
+      legacy: {
+        key: "legacy",
+        title: "历史分析结果",
+        jd: "",
+        createdAt: "",
+        analysis: matchAnalysis,
+      },
+    };
+  }
+
+  return matchAnalysis;
 }
 
 export function readResumeItems() {
   const savedItems = readStorage(resumeStorageKey);
 
-  if (!savedItems) return [createResumeItem(1)];
+  if (!savedItems) return createInitialResumeItems();
 
   try {
     return normalizeResumeItems(JSON.parse(savedItems));
   } catch {
-    return [createResumeItem(1)];
+    return createInitialResumeItems();
   }
 }
 
@@ -52,7 +92,7 @@ export function persistResumeItems(items) {
 }
 
 export function getActiveResumeItem(items = readResumeItems()) {
-  return items.find((item) => item.active) || items[0] || createResumeItem(1);
+  return items.find((item) => item.active) || items[0] || createInitialResumeItem();
 }
 
 export function readActiveResume() {
