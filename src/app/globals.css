@@ -1,26 +1,409 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --theme-app-bg: #f6f7fb;
+  --theme-app-fg: #202434;
+  --theme-surface: #ffffff;
+  --theme-surface-muted: #f8f9fd;
+  --theme-surface-soft: #f2f4fa;
+  --theme-border: #e1e6f0;
+  --theme-border-soft: #edf0f6;
+  --theme-muted: #687085;
+  --theme-muted-strong: #4b5168;
+  --theme-primary: #5f55d8;
+  --theme-primary-strong: #4f46c8;
+  --theme-primary-soft: #f3f1ff;
+  --theme-primary-softer: #ebe9ff;
+  --theme-primary-border: #ddd9ff;
+  --theme-primary-hover: #ece9ff;
+  --theme-primary-hover-border: #8579ff;
+  --theme-warning: #ffc034;
+  --theme-source-red: #e82c3a;
+  --theme-source-green: #23c66b;
+  --theme-source-teal: #23b8ad;
+  --theme-source-blue: #1677ff;
+  --theme-source-orange: #ff6b2d;
+  --theme-source-coral: #e75a54;
+  --background: var(--theme-app-bg);
+  --foreground: var(--theme-app-fg);
+  font-size: 14px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-app-bg: var(--theme-app-bg);
+  --color-app-fg: var(--theme-app-fg);
+  --color-border: var(--theme-border);
+  --color-surface: var(--theme-surface);
+  --color-surface-muted: var(--theme-surface-muted);
+  --color-surface-soft: var(--theme-surface-soft);
+  --color-app-border: var(--theme-border);
+  --color-app-border-soft: var(--theme-border-soft);
+  --color-muted: var(--theme-muted);
+  --color-muted-strong: var(--theme-muted-strong);
+  --color-primary: var(--theme-primary);
+  --color-primary-strong: var(--theme-primary-strong);
+  --color-primary-soft: var(--theme-primary-soft);
+  --color-primary-softer: var(--theme-primary-softer);
+  --color-primary-border: var(--theme-primary-border);
+  --color-primary-hover: var(--theme-primary-hover);
+  --color-primary-hover-border: var(--theme-primary-hover-border);
+  --color-warning: var(--theme-warning);
+  --color-source-red: var(--theme-source-red);
+  --color-source-green: var(--theme-source-green);
+  --color-source-teal: var(--theme-source-teal);
+  --color-source-blue: var(--theme-source-blue);
+  --color-source-orange: var(--theme-source-orange);
+  --color-source-coral: var(--theme-source-coral);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.ant-menu-light.ant-menu-root.ant-menu-inline {
+  border-inline-end: none !important;
+}
+
+.panel {
+  background: var(--theme-surface);
+  border: 1px solid #e1e6f0;
+  border-radius: 8px;
+  padding: 24px;
+}
+.job-row strong,
+.job-row small,
+.source-grid small,
+.resume-version-card b {
+  display: block;
+}
+
+.job-row small,
+.source-grid small,
+.timeline time,
+.stat-list small,
+.resume-upload-card p,
+.resume-upload-panel p {
+  color: #aeb3c8;
+}
+
+.panel-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.85fr);
+  gap: 18px;
+}
+
+.workflow-card,
+.search-card,
+.resume-upload-card,
+.resume-version-card,
+.resume-upload-panel,
+.resume-md-editor,
+.resume-output-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+  box-shadow: 0 12px 28px rgba(29, 35, 54, 0.06);
+}
+
+.section-head,
+.resume-upload-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.timeline {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.timeline p {
+  margin: 0;
+}
+
+.timeline time {
+  margin-right: 10px;
+}
+
+.timeline mark {
+  margin-right: 10px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: rgba(128, 104, 255, 0.2);
+  color: #b9aeff;
+}
+
+.stat-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-grid .stat-list {
+  grid-template-columns: 1fr;
+}
+
+.stat-list article {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #1e202c;
+  padding: 16px;
+}
+
+.stat-list span {
+  color: #83e2a6;
+}
+
+.stat-list b {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: 28px;
+}
+
+.search-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 150px 130px;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.source-grid article {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.source-grid article .ant-switch {
+  margin-left: auto;
+}
+
+.source-logo {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(128, 104, 255, 0.22);
+  color: #c8c0ff;
+  font-weight: 700;
+}
+
+.job-table {
+  display: grid;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.job-row {
+  min-width: 720px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 100px 90px 150px 80px;
+  align-items: center;
+  gap: 12px;
+  border-radius: 6px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.job-row.head {
+  background: transparent;
+  color: #aeb3c8;
+  font-size: 12px;
+}
+
+.filters {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.filters b {
+  display: inline-block;
+  min-width: 70px;
+}
+
+.resume-page {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.resume-version-panel,
+.resume-builder-main,
+.resume-builder-grid {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.add-resume-card {
+  min-height: 64px;
+}
+
+.resume-builder-grid {
+  grid-template-columns: minmax(240px, 0.8fr) minmax(320px, 1fr) minmax(
+      280px,
+      1fr
+    );
+}
+
+.resume-upload-panel,
+.resume-output-panel {
+  min-height: 260px;
+}
+
+.role-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.resume-output-panel pre {
+  white-space: pre-wrap;
+  color: #dfe2f2;
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid,
+  .resume-page,
+  .resume-builder-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.job-row small,
+.source-grid small,
+.timeline time,
+.stat-list small,
+.resume-upload-card p,
+.resume-upload-panel p,
+.job-row.head {
+  color: #71778a;
+}
+
+.workflow-card,
+.search-card,
+.resume-upload-card,
+.resume-version-card,
+.resume-upload-panel,
+.resume-md-editor,
+.resume-output-panel,
+.stat-list article,
+.source-grid article {
+  border-color: #e1e6f0;
+  background: #ffffff;
+}
+
+.source-grid article,
+.job-row {
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(29, 35, 54, 0.05);
+}
+
+.timeline mark,
+.source-logo {
+  background: #efedff;
+  color: #5f55d8;
+}
+
+.stat-list span {
+  color: #1c9b5f;
+}
+
+.resume-output-panel pre {
+  color: #30364a;
+}
+
+.resume-preview-content h1 {
+  margin: 0 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 900;
+}
+
+.resume-preview-content h2 {
+  margin: 14px 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 900;
+}
+
+.resume-preview-content p {
+  margin: 10px 0;
+  color: #a6a9ba;
+  font-weight: 400;
+  line-height: 1.65;
+}
+.resume-preview-content strong {
+  font-weight: 900;
+}
+
+.resume-preview-content ul,
+.resume-preview-content ol {
+  margin: 10px 0 10px 20px;
+  padding: 0;
+  color: #a6a9ba;
+  font-weight: 400;
+  line-height: 1.65;
+}
+
+.resume-preview-content li {
+  margin: 6px 0;
 }

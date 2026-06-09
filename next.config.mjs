@@ -2,6 +2,7 @@
 const nextConfig = {
   /* config options here */
   reactCompiler: true,
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
 };
 
 export default nextConfig;
