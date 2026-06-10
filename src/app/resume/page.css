@@ -288,6 +288,113 @@
   overflow-y: auto;
 }
 
+.resume-compare-panel {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 20px;
+  box-shadow: 0 12px 28px rgba(29, 35, 54, 0.06);
+}
+
+.resume-compare-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid #edf0f6;
+  padding-bottom: 16px;
+}
+
+.resume-compare-toolbar h1,
+.resume-compare-toolbar p {
+  margin: 0;
+}
+
+.resume-compare-toolbar p {
+  margin-top: 6px;
+  color: #687085;
+  font-weight: 700;
+}
+
+.resume-compare-selects {
+  display: grid;
+  min-width: min(520px, 100%);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resume-compare-selects label {
+  display: grid;
+  gap: 7px;
+  color: #4b5168;
+  font-weight: 900;
+}
+
+.resume-diff-view {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #e1e6f0;
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 10px 0;
+  font-size: 13px;
+}
+
+.resume-diff-line {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  min-height: 28px;
+  align-items: start;
+  border-left: 3px solid transparent;
+}
+
+.resume-diff-line code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 5px 12px 5px 0;
+  color: #30364a;
+}
+
+.resume-diff-sign {
+  padding: 5px 10px;
+  text-align: center;
+  color: #687085;
+  font-family: var(--font-geist-mono), monospace;
+  font-weight: 900;
+}
+
+.resume-diff-line.added {
+  border-left-color: #23c66b;
+  background: #ecfdf5;
+}
+
+.resume-diff-line.added .resume-diff-sign,
+.resume-diff-line.added code {
+  color: #1c7c4c;
+}
+
+.resume-diff-line.removed {
+  border-left-color: #e75a54;
+  background: #fff4f1;
+}
+
+.resume-diff-line.removed .resume-diff-sign,
+.resume-diff-line.removed code {
+  color: #b83b34;
+}
+
+.resume-diff-empty {
+  padding: 28px;
+  text-align: center;
+  color: #687085;
+  font-weight: 900;
+}
+
 
 
 .resume-target-form {
@@ -310,7 +417,6 @@
   flex-direction: column;
   gap: 10px;
   color: #fff;
-  font-weight: 900;
 }
 
 .target-input-grid label:first-child .ant-input {
@@ -343,6 +449,12 @@
 
   .resume-toolbar {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .resume-compare-toolbar,
+  .resume-compare-selects {
+    grid-template-columns: 1fr;
     flex-direction: column;
   }
 
@@ -386,8 +498,6 @@
 .resume-version-tile h2,
 .resume-version-tile b,
 .resume-dropzone h1,
-.resume-preview-content h1,
-.resume-preview-content h2,
 .target-input-grid label,
 .target-jd,
 .resume-role-button.active {
@@ -403,10 +513,7 @@
 .resume-divider,
 .resume-role-button,
 .resume-md-card header div,
-.resume-md-card footer,
-.resume-preview-content p,
-.resume-preview-content ul,
-.resume-preview-content ol {
+.resume-md-card footer {
   color: #687085;
 }
 
@@ -445,9 +552,7 @@
 
 .resume-divider::before,
 .resume-divider::after,
-.resume-md-card footer,
-.resume-preview-content h1,
-.resume-preview-content h2 {
+.resume-md-card footer{
   border-color: #e5e8f1;
 }
 

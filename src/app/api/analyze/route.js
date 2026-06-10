@@ -51,8 +51,28 @@ export async function POST(request) {
   ],
   "ats": {
     "score": 76,
-    "matched": ["关键词"],
-    "missing": ["关键词"],
+    "keywordGroups": [
+      {
+        "title": "硬性要求",
+        "keywords": [
+          {"name":"本科","matched":true,"evidence":"简历中的命中依据或缺失说明"}
+        ]
+      },
+      {
+        "title": "业务技能",
+        "keywords": [
+          {"name":"数据分析","matched":true,"evidence":"简历中的命中依据或缺失说明"}
+        ]
+      },
+      {
+        "title": "软素质",
+        "keywords": [
+          {"name":"沟通协作","matched":true,"evidence":"简历中的命中依据或缺失说明"}
+        ]
+      }
+    ],
+    "matched": ["兼容字段：已命中关键词"],
+    "missing": ["兼容字段：未命中关键词"],
     "suggestions": ["ATS优化建议"]
   },
   "rewriteSuggestions": [
@@ -69,7 +89,7 @@ export async function POST(request) {
 1. current 和 optimized 为 0-100 的整数，optimized 必须大于等于 current。
 2. dimensions 正好 5 条，score 为 0-100 整数。
 3. resumeHighlights 反映简历自身优缺点，并结合传入的 resumeItem.highlight；至少 2 条优势、2 条短板。
-4. ats.matched 和 ats.missing 各 4-10 个关键词，关键词必须来自 JD 或能从 JD 合理归纳。
+4. ats.keywordGroups 必须从岗位JD中提取关键词，并逐项判断简历是否命中；固定输出 3 组：硬性要求、业务技能、软素质，每组 4-8 个关键词。keyword.name 必须来自 JD 原文或从 JD 合理归纳，matched 必须依据简历内容判断，evidence 简短说明命中依据或缺失原因。
 5. rewriteSuggestions 输出 3-5 条，before 必须尽量引用或概括简历里的原表达，after 要更贴近 JD，reason 要说明为什么提升匹配或ATS通过率。
 6. 不要编造候选人不存在的经历、学历、公司或技能。
 
@@ -118,6 +138,7 @@ function normalizeAnalysis(data) {
     resumeHighlights: normalizeHighlights(data?.resumeHighlights),
     ats: {
       score: clampScore(data?.ats?.score),
+      keywordGroups: normalizeKeywordGroups(data?.ats),
       matched: normalizeStringList(data?.ats?.matched, 10),
       missing: normalizeStringList(data?.ats?.missing, 10),
       suggestions: normalizeStringList(data?.ats?.suggestions, 5),
@@ -158,6 +179,46 @@ function normalizeHighlights(highlights) {
     ),
     description: String(item?.description || "").slice(0, 120),
   }));
+}
+
+function normalizeKeywordGroups(ats) {
+  const titles = ["硬性要求", "业务技能", "软素质"];
+  const sourceGroups = Array.isArray(ats?.keywordGroups)
+    ? ats.keywordGroups
+    : [];
+  const fallbackKeywords = [
+    ...normalizeStringList(ats?.matched, 10).map((name) => ({
+      name,
+      matched: true,
+      evidence: "简历中已体现",
+    })),
+    ...normalizeStringList(ats?.missing, 10).map((name) => ({
+      name,
+      matched: false,
+      evidence: "简历中暂未明确体现",
+    })),
+  ];
+
+  return titles.map((title, groupIndex) => {
+    const group =
+      sourceGroups.find((item) => item?.title === title) ||
+      sourceGroups[groupIndex];
+    const keywords = normalizeArray(group?.keywords, 10)
+      .map((keyword) => ({
+        name: String(keyword?.name || keyword || "").trim().slice(0, 24),
+        matched: Boolean(keyword?.matched),
+        evidence: String(keyword?.evidence || "").trim().slice(0, 80),
+      }))
+      .filter((keyword) => keyword.name);
+
+    return {
+      title,
+      keywords:
+        keywords.length || groupIndex !== 1
+          ? keywords
+          : fallbackKeywords.slice(0, 10),
+    };
+  });
 }
 
 function normalizeRewriteSuggestions(suggestions) {

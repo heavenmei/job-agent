@@ -12,7 +12,7 @@
   --theme-muted-strong: #4b5168;
   --theme-primary: #5f55d8;
   --theme-primary-strong: #4f46c8;
-  --theme-primary-soft: #f3f1ff;
+  --theme-primary-soft: #a090f9;
   --theme-primary-softer: #ebe9ff;
   --theme-primary-border: #ddd9ff;
   --theme-primary-hover: #ece9ff;
@@ -86,8 +86,9 @@ textarea {
   background: var(--theme-surface);
   border: 1px solid #e1e6f0;
   border-radius: 8px;
-  padding: 24px;
+  padding: 16px;
 }
+
 .job-row strong,
 .job-row small,
 .source-grid small,
@@ -150,6 +151,11 @@ h1 {
 
 h2 {
   font-size: 18px;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -387,7 +393,6 @@ h2 {
 
 .resume-preview-content p {
   margin: 10px 0;
-  color: #a6a9ba;
   font-weight: 400;
   line-height: 1.65;
 }
@@ -399,7 +404,6 @@ h2 {
 .resume-preview-content ol {
   margin: 10px 0 10px 20px;
   padding: 0;
-  color: #a6a9ba;
   font-weight: 400;
   line-height: 1.65;
 }

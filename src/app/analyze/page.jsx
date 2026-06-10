@@ -1,35 +1,36 @@
 "use client";
 
-import {
-  CheckCircleFilled,
-  RocketOutlined,
-  ThunderboltOutlined,
-} from "@ant-design/icons";
-import { Button, Input, Progress, Select, Tag, message } from "antd";
+import { RocketOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { Button, Input, Select, message } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import AnalysisResult from "./AnalysisResult";
 import { AppShell } from "../components/AppShell";
-import ResumeDisplay from "../components/ResumeDisplay";
+import { pendingAnalyzeJobKey } from "../config";
 import {
+  createResumeItem,
+  createInitialResumeItems,
   getActiveResumeItem,
   persistResumeItems,
   readActiveResume,
   readResumeItems,
+  setActiveResumeItem,
   updateResumeItem,
 } from "../storage";
+import { readStorage, writeStorage } from "../util";
 import "./page.css";
 
-const dimensionColors = {
-  skills: "#5f55d8",
-  experience: "#23b8ad",
-  education: "#1677ff",
-  delivery: "#ff8a3d",
-  growth: "#23c66b",
-};
-
 export default function AnalyzePage() {
+  const router = useRouter();
+  const [resumeItems, setResumeItems] = useState(createInitialResumeItems);
   const [resumeText, setResumeText] = useState("");
   const [resumeItem, setResumeItem] = useState(null);
   const [jdText, setJdText] = useState("");
+  const [targetForm, setTargetForm] = useState({
+    company: "",
+    jobTitle: "",
+    jd: "",
+  });
   const [analysis, setAnalysis] = useState(null);
   const [selectedAnalysisKey, setSelectedAnalysisKey] = useState("");
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -43,12 +44,27 @@ export default function AnalyzePage() {
       const resumeItems = readResumeItems();
       const activeResume = getActiveResumeItem(resumeItems);
       const latestEntry = getLatestAnalysisEntry(activeResume);
+      const pendingJob = readPendingAnalyzeJob();
+      const pendingEntry = pendingJob?.jd
+        ? getAnalysisEntryForJd(activeResume, pendingJob.jd)
+        : null;
+      const initialJd = pendingJob?.jd || latestEntry?.jd || "";
 
+      setResumeItems(resumeItems);
       setResumeText(readActiveResume());
       setResumeItem(activeResume);
-      setSelectedAnalysisKey(latestEntry?.key || "");
-      setJdText(latestEntry?.jd || "");
-      setAnalysis(latestEntry?.analysis || null);
+      setSelectedAnalysisKey(pendingEntry?.key || latestEntry?.key || "");
+      setJdText(initialJd);
+      setTargetForm({
+        company: pendingJob?.company || "",
+        jobTitle: pendingJob?.title || "",
+        jd: initialJd,
+      });
+      setAnalysis(
+        pendingEntry?.analysis ||
+          (pendingJob ? null : latestEntry?.analysis) ||
+          null
+      );
     });
 
     return () => {
@@ -63,6 +79,28 @@ export default function AnalyzePage() {
     }),
     [jdText, resumeText]
   );
+
+  function selectResume(resumeId) {
+    const nextItems = setActiveResumeItem(resumeItems, resumeId);
+    const nextResumeItem =
+      nextItems.find((item) => item.id === resumeId) ||
+      getActiveResumeItem(nextItems);
+    const entry =
+      getAnalysisEntryForJd(nextResumeItem, jdText) ||
+      getLatestAnalysisEntry(nextResumeItem);
+    const nextJd = getAnalysisEntryForJd(nextResumeItem, jdText)
+      ? jdText
+      : entry?.jd || jdText;
+
+    setResumeItems(nextItems);
+    persistResumeItems(nextItems);
+    setResumeText(nextResumeItem?.resume || "");
+    setResumeItem(nextResumeItem || null);
+    setSelectedAnalysisKey(entry?.key || "");
+    setAnalysis(entry?.analysis || null);
+    setJdText(nextJd);
+    setTargetForm((current) => ({ ...current, jd: nextJd }));
+  }
 
   async function runAnalysis() {
     if (!resumeText.trim()) {
@@ -127,23 +165,6 @@ export default function AnalyzePage() {
     }
   }
 
-  function syncResume(value) {
-    setResumeText(value || "");
-    setAnalysis(null);
-    setSelectedAnalysisKey("");
-  }
-
-  function syncResumeItem(nextResumeItem) {
-    const entry =
-      getAnalysisEntryForJd(nextResumeItem, jdText) ||
-      getLatestAnalysisEntry(nextResumeItem);
-
-    setResumeItem(nextResumeItem || null);
-    setSelectedAnalysisKey(entry?.key || "");
-    if (entry?.jd) setJdText(entry.jd);
-    setAnalysis(entry?.analysis || null);
-  }
-
   function selectAnalysis(key) {
     const entry = getAnalysisEntries(resumeItem).find(
       (item) => item.key === key
@@ -151,75 +172,110 @@ export default function AnalyzePage() {
 
     setSelectedAnalysisKey(key);
     setAnalysis(entry?.analysis || null);
-    if (entry?.jd) setJdText(entry.jd);
+    if (entry?.jd) {
+      setJdText(entry.jd);
+      setTargetForm((current) => ({ ...current, jd: entry.jd }));
+    }
   }
+
+  function updateTargetField(key, value) {
+    setTargetForm((current) => ({ ...current, [key]: value }));
+
+    if (key !== "jd") return;
+
+    const entry = getAnalysisEntryForJd(resumeItem, value);
+
+    setJdText(value);
+    setSelectedAnalysisKey(entry?.key || "");
+    setAnalysis(entry?.analysis || null);
+  }
+
+  function applyRewriteSuggestions(suggestions) {
+    if (!resumeText.trim()) {
+      message.warning("请先选择或上传简历");
+      return;
+    }
+
+    if (!Array.isArray(suggestions) || suggestions.length === 0) {
+      message.warning("暂无可应用的改写建议");
+      return;
+    }
+
+    const nextResume = applySuggestionsToResume(resumeText, suggestions);
+    const sourceTitle = resumeItem?.title || resumeItem?.version || "简历";
+    const nextItem = createResumeItem(resumeItems.length + 1, nextResume, {
+      title: `${sourceTitle} - 岗位优化版`,
+      version: "岗位匹配优化",
+      role: targetForm.jobTitle || resumeItem?.role || "",
+      highlight: resumeItem?.highlight || [],
+      matchAnalysis: resumeItem?.matchAnalysis || {},
+      active: true,
+    });
+    const nextItems = setActiveResumeItem(
+      [nextItem, ...resumeItems],
+      nextItem.id
+    );
+
+    setResumeItems(nextItems);
+    setResumeItem(nextItem);
+    setResumeText(nextResume);
+    persistResumeItems(nextItems);
+    message.success("已创建新的优化简历");
+    router.push("/resume");
+  }
+
   const analysisEntries = getAnalysisEntries(resumeItem);
 
   return (
     <AppShell>
-      <div className="analyze-page h-full flex flex-col gap-2">
-        <header className="analyze-header">
-          <div className="flex gap-2">
-            <h1>岗位匹配分析</h1>
-            <p>把简历和岗位 JD 放在一起，快速看清匹配、缺口和补强方向。</p>
-          </div>
-          <Button
-            icon={<ThunderboltOutlined />}
-            loading={analysisLoading}
-            onClick={runAnalysis}
-            size="large"
-            type="primary"
-          >
-            开始分析
-          </Button>
+      <div className="analyze-page h-full flex flex-col gap-4 overflow-hidden">
+        <header className="flex gap-4 items-center">
+          <h1>岗位匹配分析</h1>
+          <p className="text-gray-500">
+            把简历和岗位 JD 放在一起，快速看清匹配、缺口和补强方向。
+          </p>
         </header>
 
-        <div className="flex-1 flex gap-6 h-11/12">
-          <section className="w-1/3 flex flex-col overflow-hidden h-full gap-6 panel">
-            <div className="flex-1 overflow-hidden">
-              <ResumeDisplay
-                titleNode={<h2>简历信息</h2>}
-                mdClassName="p-2 bg-gray-200 rounded h-full"
-                onResumeChange={syncResume}
-                onResumeItemChange={syncResumeItem}
+        <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
+          <section className="analyze-left-panel">
+            <div className="analyze-resume-picker">
+              <h2>选择简历</h2>
+              <Select
+                value={resumeItem?.id}
+                onChange={selectResume}
+                options={resumeItems.map((item) => ({
+                  label: item.title || item.version || "未命名简历",
+                  value: item.id,
+                }))}
               />
             </div>
-            <div className="flex flex-col gap-4">
-              <header className="flex justify-between items-center">
-                <h2>岗位 JD 描述</h2>
-                {analysisEntries?.length > 1 ? (
-                  <Select
-                    value={selectedAnalysisKey}
-                    onChange={selectAnalysis}
-                    options={analysisEntries.map((item) => ({
-                      label: item.title,
-                      value: item.key,
-                    }))}
-                  />
-                ) : null}
-              </header>
-              <Input.TextArea
-         
-                onChange={(event) => {
-                  const value = event.target.value;
-                  const entry = getAnalysisEntryForJd(resumeItem, value);
 
-                  setJdText(value);
-                  setSelectedAnalysisKey(entry?.key || "");
-                  setAnalysis(entry?.analysis || null);
-                }}
-                placeholder="粘贴岗位职责、任职要求、加分项..."
-                value={jdText}
-                autoSize={{ minRows: 5, maxRows: 5 }}
-              />
-            </div>
+            <TargetedEditor
+              analysisEntries={analysisEntries}
+              onSelectAnalysis={selectAnalysis}
+              onUpdateField={updateTargetField}
+              selectedAnalysisKey={selectedAnalysisKey}
+              targetForm={targetForm}
+              textStats={textStats}
+            />
+
+            <Button
+              block
+              icon={<ThunderboltOutlined />}
+              loading={analysisLoading}
+              onClick={runAnalysis}
+              size="large"
+              type="primary"
+            >
+              开始分析
+            </Button>
           </section>
-          <section className="flex-1 analyze-result-panel overflow-auto">
-            {analysis ? (
-              <AnalysisResult analysis={analysis} />
-            ) : (
-              <EmptyResult />
-            )}
+
+          <section className="min-h-0 overflow-auto analyze-result-panel">
+            <AnalysisResult
+              analysis={analysis}
+              onApplyRewriteSuggestions={applyRewriteSuggestions}
+            />
           </section>
         </div>
       </div>
@@ -227,177 +283,120 @@ export default function AnalyzePage() {
   );
 }
 
-function EmptyResult() {
+function TargetedEditor({
+  analysisEntries,
+  onSelectAnalysis,
+  onUpdateField,
+  selectedAnalysisKey,
+  targetForm,
+  textStats,
+}) {
   return (
-    <div className="analyze-empty">
-      <RocketOutlined />
-      <h2>等待分析</h2>
-      <p>点击左侧按钮后，这里会展示匹配度、ATS关键词、简历优缺点和改写建议。</p>
-    </div>
-  );
-}
+    <div className="analyze-target-editor">
+      <h2>针对岗位分析匹配度</h2>
 
-function AnalysisResult({ analysis }) {
-  const dimensions = analysis.dimensions || [];
-  const match = analysis.match || {};
-  const ats = analysis.ats || {};
-
-  return (
-    <div className="analysis-result">
-      <article className="score-card">
+      <div className="target-input-grid">
         <div>
-          <span>岗位匹配度</span>
-          <strong>{match.current || 0}%</strong>
-          <p>{match.summary}</p>
-          <div className="optimized-score">
-            <b>建议优化后</b>
-            <em>{match.optimized || 0}%</em>
-          </div>
+          目标公司
+          <Input
+            size="medium"
+            onChange={(event) => onUpdateField("company", event.target.value)}
+            placeholder="请输入公司名"
+            value={targetForm.company}
+          />
         </div>
-        <Progress
-          format={() => ""}
-          percent={match.current || 0}
-          size={132}
-          strokeColor="#5f55d8"
-          strokeWidth={10}
-          type="circle"
-        />
-      </article>
-
-      <div className="metric-grid">
-        {dimensions.map((item) => (
-          <article key={item.key}>
-            <div className="metric-title">
-              <b>{item.label}</b>
-              <span>{item.score}%</span>
-            </div>
-            <Progress
-              percent={item.score}
-              showInfo={false}
-              strokeColor={dimensionColors[item.key] || "#5f55d8"}
-              trailColor="#eef1f7"
-            />
-          </article>
-        ))}
+        <div>
+          目标岗位
+          <Input
+            onChange={(event) => onUpdateField("jobTitle", event.target.value)}
+            placeholder="请输入岗位名"
+            value={targetForm.jobTitle}
+          />
+        </div>
       </div>
 
-      <article className="radar-card">
+      <label className="analyze-jd-field">
+        <span className="flex justify-between">
+          <span>岗位 JD</span>
+          <span className="text-gray-400">{textStats.jd} 字</span>
+        </span>
+        <Input.TextArea
+          onChange={(event) => onUpdateField("jd", event.target.value)}
+          placeholder="请粘贴岗位职责、任职要求、加分项，越完整分析效果越好"
+          value={targetForm.jd}
+        />
+      </label>
+
+      <div className="analyze-history-select">
         <header>
-          <h2>能力覆盖图</h2>
-          <span>越靠右说明该维度越贴近 JD</span>
+          <h2>历史分析</h2>
+          <small>选择后会填充对应 JD</small>
         </header>
-        <div className="radar-lines">
-          {dimensions.map((item) => (
-            <div className="radar-row" key={item.key}>
-              <span>{item.label}</span>
-              <i
-                style={{
-                  width: `${item.score}%`,
-                  background: dimensionColors[item.key] || "#5f55d8",
-                }}
-              />
-              <b>{item.score}</b>
-            </div>
-          ))}
-        </div>
-      </article>
-
-      <section className="keyword-card">
-        <h2>关键词命中 ATS</h2>
-        <div className="ats-score-row">
-          <span>ATS 命中分</span>
-          <Progress percent={ats.score || 0} strokeColor="#23b8ad" />
-        </div>
-        <div className="keyword-groups">
-          <div>
-            <b>已命中</b>
-            <div>
-              {(ats.matched || []).map((keyword) => (
-                <Tag color="green" key={keyword}>
-                  {keyword}
-                </Tag>
-              ))}
-            </div>
-          </div>
-          <div>
-            <b>待补充</b>
-            <div>
-              {(ats.missing || []).map((keyword) => (
-                <Tag color="orange" key={keyword}>
-                  {keyword}
-                </Tag>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="insight-grid">
-        <InsightCard
-          title="简历自身优势"
-          items={(analysis.resumeHighlights || [])
-            .filter((item) => item.type !== "weakness")
-            .map(formatHighlight)}
-        />
-        <InsightCard
-          title="简历自身短板"
-          items={(analysis.resumeHighlights || [])
-            .filter((item) => item.type === "weakness")
-            .map(formatHighlight)}
-        />
-        <InsightCard title="ATS优化建议" items={ats.suggestions || []} />
-      </section>
-
-      <section className="rewrite-card">
-        <h2>优化改写建议</h2>
-        <div className="rewrite-list">
-          {(analysis.rewriteSuggestions || []).map((item, index) => (
-            <article key={`${item.section}-${index}`}>
-              <header>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <b>{item.section}</b>
-              </header>
-              <div className="rewrite-compare">
-                <div>
-                  <strong>原表达</strong>
-                  <p>{item.before}</p>
-                </div>
-                <div>
-                  <strong>建议改写</strong>
-                  <p>{item.after}</p>
-                </div>
-              </div>
-              <footer>{item.reason}</footer>
-            </article>
-          ))}
-        </div>
-      </section>
+        {analysisEntries?.length > 1 ? (
+          <Select
+            value={selectedAnalysisKey}
+            onChange={onSelectAnalysis}
+            options={analysisEntries.map((item) => ({
+              label: item.title,
+              value: item.key,
+            }))}
+          />
+        ) : (
+          <span className="analyze-history-empty">暂无可切换的历史分析</span>
+        )}
+      </div>
     </div>
   );
 }
 
-function InsightCard({ title, items }) {
-  return (
-    <article className="insight-card">
-      <h2>{title}</h2>
-      <ul>
-        {(items.length ? items : ["暂无明确结论"]).map((item) => (
-          <li key={item}>
-            <CheckCircleFilled />
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-    </article>
-  );
-}
+function readPendingAnalyzeJob() {
+  const savedJob = readStorage(pendingAnalyzeJobKey);
 
-function formatHighlight(item) {
-  return `${item.title}：${item.description}`;
+  if (!savedJob) return null;
+
+  writeStorage(pendingAnalyzeJobKey, "");
+
+  try {
+    return JSON.parse(savedJob);
+  } catch {
+    return null;
+  }
 }
 
 function countReadableChars(value) {
   return String(value || "").replace(/\s/g, "").length;
+}
+
+function applySuggestionsToResume(resume, suggestions) {
+  let nextResume = resume;
+  const unappliedSuggestions = [];
+
+  suggestions.forEach((suggestion) => {
+    const before = String(suggestion.before || "").trim();
+    const after = String(suggestion.after || "").trim();
+
+    if (!after) return;
+
+    if (before && nextResume.includes(before)) {
+      nextResume = nextResume.replace(before, after);
+    } else {
+      unappliedSuggestions.push(suggestion);
+    }
+  });
+
+  if (unappliedSuggestions.length === 0) return nextResume;
+
+  return `${nextResume.trim()}\n\n## 岗位匹配优化建议\n\n${unappliedSuggestions
+    .map((suggestion, index) =>
+      [
+        `### ${index + 1}. ${suggestion.section || "简历内容"}`,
+        suggestion.after ? suggestion.after : "",
+        suggestion.reason ? `> ${suggestion.reason}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+    )
+    .join("\n\n")}\n`;
 }
 
 function getAnalysisEntries(resumeItem) {

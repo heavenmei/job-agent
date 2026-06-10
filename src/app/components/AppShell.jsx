@@ -1,44 +1,55 @@
 "use client";
 
+import { useState } from "react";
 import {
   AppstoreOutlined,
   BarChartOutlined,
   FileTextOutlined,
   SearchOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
-import { ConfigProvider, Menu, theme } from "antd";
+import { ConfigProvider, Menu, theme, Button, Layout } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+const { Header, Footer, Sider, Content } = Layout;
 
 const navItems = [
   {
     href: "/",
     key: "dashboard",
     label: "控制台",
-    icon: <SearchOutlined style={{ fontSize: "1.5rem" }} />,
+    icon: <SearchOutlined />,
   },
   {
     href: "/jobs",
     key: "jobs",
     label: "岗位列表",
-    icon: <AppstoreOutlined style={{ fontSize: "1.5rem" }} />,
+    icon: <AppstoreOutlined />,
   },
   {
     href: "/resume",
     key: "resume",
     label: "AI改简历",
-    icon: <FileTextOutlined style={{ fontSize: "1.5rem" }} />,
+    icon: <FileTextOutlined />,
   },
   {
     href: "/analyze",
     key: "analyze",
     label: "匹配分析",
-    icon: <BarChartOutlined style={{ fontSize: "1.5rem" }} />,
+    icon: <BarChartOutlined />,
+  },
+  {
+    href: "/setting",
+    key: "setting",
+    label: "模型设置",
+    icon: <SettingOutlined />,
   },
 ];
 
 export function AppShell({ children }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   const selected =
     navItems.find((item) =>
@@ -62,26 +73,34 @@ export function AppShell({ children }) {
         },
         components: {
           Upload: { colorFillAlter: "#f1f1f1" },
-          Button: { controlHeight: 32, paddingInline: 12 },
-          Input: { controlHeight: 34 },
           Select: { controlHeight: 34 },
           Tabs: { horizontalMargin: "0", titleFontSize: 13 },
         },
       }}
     >
-      <main className="flex h-screen bg-app-bg text-app-fg overflow-hidden">
-        <aside className="w-60 border-r border-app-border bg-surface px-3 py-5 shadow-[8px_0_24px_rgba(29,35,54,0.04)] max-[900px]:static">
-          <div className="flex items-center gap-3 px-2 pb-5">
-            <span className="grid h-12 w-12 place-items-center rounded-md bg-primary text-xl font-extrabold text-white">
+      <Layout className="overflow-hidden h-screen bg-app-bg">
+        <Sider
+          width="10%"
+          theme="light"
+          collapsible
+          collapsed={collapsed}
+          onCollapse={(value) => setCollapsed(value)}
+        >
+          <div className="flex justify-center items-center gap-2 px-2 my-6">
+            <span className="grid h-8 w-8 place-items-center rounded-md bg-primary text-lg font-extrabold text-white">
               JA
             </span>
-            <div>
-              <h1 className="font-bold">Job Agent</h1>
-              <small className="block text-muted">AI 求职控制台</small>
-            </div>
+            {collapsed ? null : (
+              <div>
+                <h2 className="font-bold">Job Agent</h2>
+                <small className="block text-muted">AI 求职控制台</small>
+              </div>
+            )}
           </div>
+
           <Menu
             mode="inline"
+            inlineCollapsed={collapsed}
             style={{
               borderInlineEnd: "none",
               fontWeight: 700,
@@ -94,11 +113,9 @@ export function AppShell({ children }) {
               label: <Link href={item.href}>{item.label}</Link>,
             }))}
           />
-        </aside>
-        <section className="flex-1 p-4 overflow-auto">
-          {children}
-        </section>
-      </main>
+        </Sider>
+        <Content className="p-4 overflow-auto">{children}</Content>
+      </Layout>
     </ConfigProvider>
   );
 }

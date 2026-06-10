@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { InboxOutlined, StarFilled } from "@ant-design/icons";
+import {
+  DownOutlined,
+  FileTextOutlined,
+  HighlightOutlined,
+  InboxOutlined,
+  StarFilled,
+} from "@ant-design/icons";
 import { Button, message, Select, Upload } from "antd";
 import ReactMarkdown from "react-markdown";
 import {
@@ -39,8 +45,9 @@ export default function ResumeDisplay({
 
   const activeResume = useMemo(
     () =>
-      effectiveResumeItems.find((item) => item.id === effectiveActiveResumeId) ||
-      getActiveResumeItem(effectiveResumeItems),
+      effectiveResumeItems.find(
+        (item) => item.id === effectiveActiveResumeId
+      ) || getActiveResumeItem(effectiveResumeItems),
     [effectiveActiveResumeId, effectiveResumeItems]
   );
   const resume = activeResume?.resume || "";
@@ -89,7 +96,8 @@ export default function ResumeDisplay({
   }
 
   function setResume(value) {
-    const targetItem = activeResume || getActiveResumeItem(effectiveResumeItems);
+    const targetItem =
+      activeResume || getActiveResumeItem(effectiveResumeItems);
     const nextItems = updateResumeItem(effectiveResumeItems, targetItem.id, {
       resume: value || "",
       highlight: [],
@@ -141,9 +149,13 @@ export default function ResumeDisplay({
         throw new Error(data.message || data.error || "简历分析失败");
       }
 
-      const nextItems = updateResumeItem(effectiveResumeItems, activeResume.id, {
-        highlight: data.highlights || [],
-      });
+      const nextItems = updateResumeItem(
+        effectiveResumeItems,
+        activeResume.id,
+        {
+          highlight: data.highlights || [],
+        }
+      );
 
       syncResumeItems(nextItems, activeResume.id);
       message.success("简历分析完成");
@@ -162,42 +174,58 @@ export default function ResumeDisplay({
         </div>
       );
     } else if (mode === "analysis") {
-      return analysisItems.length ? (
-        <div className="grid grid-cols-4 gap-5 max-[1100px]:grid-cols-2 max-[720px]:grid-cols-1 max-[720px]:gap-3">
-          {analysisItems.map((item, index) => (
-            <article
-              className="grid min-h-37 grid-cols-[48px_minmax(0,1fr)] gap-4 rounded-[7px] border border-app-border bg-surface-muted p-4 max-[720px]:min-h-0 max-[720px]:p-4"
-              key={`${item.number}-${item.title}`}
-            >
-              <span className="grid h-11 w-11 place-items-center rounded-full border border-primary-border bg-primary-soft text-[17px] font-black text-primary">
-                {item.number || String(index + 1).padStart(2, "0")}
-              </span>
-              <div>
-                <h2 className="flex items-center gap-1.5 text-[19px] font-black text-app-fg">
-                  {item.title}
-                  {item.featured ? (
-                    <StarFilled className="text-[17px] text-warning" />
-                  ) : null}
-                </h2>
-                <p className="mt-2.5 text-[15px] font-bold leading-[1.6] text-muted">
-                  {item.description}
-                </p>
-              </div>
-            </article>
-          ))}
+      return renderAnalysisResumePanel();
+    }
+  };
+
+  const renderAnalysisResumePanel = () => {
+    return analysisItems.length ? (
+      <div className="grid grid-cols-4 gap-5 max-[1100px]:grid-cols-2 max-[720px]:grid-cols-1 max-[720px]:gap-3">
+        {analysisItems.map((item, index) => (
+          <article
+            className="grid min-h-37 grid-cols-[48px_minmax(0,1fr)] gap-4 rounded-[7px] border border-app-border bg-surface-muted p-4 max-[720px]:min-h-0 max-[720px]:p-4"
+            key={`${item.number}-${item.title}`}
+          >
+            <span className="grid h-11 w-11 place-items-center rounded-full border border-primary-border bg-primary-soft text-[17px] font-black text-primary">
+              {item.number || String(index + 1).padStart(2, "0")}
+            </span>
+            <div>
+              <h2 className="flex items-center gap-1.5 text-[19px] font-black text-app-fg">
+                {item.title}
+                {item.featured ? (
+                  <StarFilled className="text-[17px] text-warning" />
+                ) : null}
+              </h2>
+              <p className="mt-2.5 text-[15px] font-bold leading-[1.6] text-muted">
+                {item.description}
+              </p>
+            </div>
+          </article>
+        ))}
+      </div>
+    ) : (
+      <div className="flex flex-col items-center border-t border-border gap-2 pt-4">
+        <div className="flex gap-2 items-center">
+          <div className="w-12 h-12 rounded-full bg-primary-softer flex items-center justify-center text-primary text-2xl">
+            <HighlightOutlined />
+          </div>
+          <p className="text-xl font-bold">开始分析，为你定制求职方案</p>
         </div>
-      ) : (
+
+        <p className="text-md font-bold text-gray-400">
+          Job AI将深度分析你的简历，为你整理专属求职表格，并持续监控全网适合你的岗位
+        </p>
         <Button
-          block
           size="large"
           loading={analysisLoading}
           onClick={analyzeResume}
           type="primary"
+          icon={<HighlightOutlined />}
         >
-          分析简历
+          开始分析我的简历
         </Button>
-      );
-    }
+      </div>
+    );
   };
 
   function renderSelect() {

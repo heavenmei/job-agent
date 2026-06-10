@@ -4,133 +4,23 @@ import { SearchOutlined, StarFilled } from "@ant-design/icons";
 import { Button, Drawer, Empty, Input, Spin, Switch, Table, Tag } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import ResumeDisplay from "../components/ResumeDisplay";
+import {
+  categoryTabs,
+  filterRows,
+  defaultFilters,
+  pendingAnalyzeJobKey,
+  sourceCards,
+  apiSourceIds,
+} from "../config";
+import { writeStorage } from "../util";
 
 import "./page.css";
 
-const categoryTabs = [
-  { label: "机械专业", value: "mechanical" },
-  { label: "不限专业岗", value: "broad" },
-  { label: "央国企", value: "stateOwned" },
-  { label: "机械工程师", value: "mechanicalEngineer" },
-  { label: "工艺工程师", value: "processEngineer" },
-  { label: "产品开发工程师", value: "productEngineer" },
-  { label: "机械设备行业", value: "equipment" },
-  { label: "汽车行业", value: "automotive" },
-  { label: "航空航天与国防行业", value: "aerospace" },
-];
-
-const filterRows = [
-  { key: "cohort", label: "批次", values: ["26届"] },
-  { key: "degree", label: "学历", values: ["本科可投", "只看本科"] },
-  {
-    key: "major",
-    label: "专业",
-    values: ["机械可投", "推荐机械", "明确要求机械", "修改"],
-  },
-  {
-    key: "city",
-    label: "城市",
-    values: ["全国", "武汉", "上海", "深圳", "北京", "更多"],
-  },
-  { key: "match", label: "匹配度", values: ["不限", "高匹配"] },
-  {
-    key: "company",
-    label: "公司",
-    values: ["不限", "央国企", "大厂", "高信用", "高科技"],
-  },
-];
-
-const defaultFilters = {
-  category: "mechanical",
-  cohort: "26届",
-  degree: "本科可投",
-  major: "推荐机械",
-  city: "全国",
-  match: "不限",
-  company: "不限",
-  keyword: "",
-};
-
-const sourceCards = [
-  {
-    id: "sasac",
-    name: "国务院国资委",
-    type: "国家发布",
-    badge: "SASAC",
-    color: "#d71920",
-    logo: "/image/guozi_logo.png",
-  },
-  {
-    id: "mohrss",
-    name: "中国人社部",
-    type: "国家发布",
-    badge: "人社",
-    color: "#d71920",
-    logo: "/image/renshe_logo.png",
-  },
-  {
-    id: "official",
-    name: "企业官网",
-    type: "官方发布",
-    badge: "官网",
-    color: "#4f46c8",
-    logo: "/image/official_logo.png",
-  },
-  {
-    id: "wechat",
-    name: "微信公众号",
-    type: "官方发布",
-    badge: "微",
-    color: "#07c160",
-    logo: "/image/weixin_logo.png",
-  },
-  {
-    id: "guopin",
-    name: "国聘网",
-    type: "求职平台",
-    badge: "国聘",
-    color: "#c8102e",
-    logo: "/image/guopin_logo.png",
-  },
-  {
-    id: "boss",
-    name: "Boss直聘",
-    type: "求职平台",
-    badge: "BOSS",
-    color: "#00b38a",
-    logo: "/image/boss_logo.png",
-  },
-  {
-    id: "job",
-    name: "前程无忧",
-    type: "求职平台",
-    badge: "前程",
-    color: "#f36f21",
-    logo: "/image/51job_logo.png",
-  },
-  {
-    id: "zhilian",
-    name: "智联招聘",
-    type: "求职平台",
-    badge: "聘",
-    color: "#1677ff",
-    logo: "/image/zhilian_logo.png",
-  },
-  {
-    id: "liepin",
-    name: "猎聘网",
-    type: "求职平台",
-    badge: "猎聘",
-    color: "#ff6b00",
-    logo: "/image/liepin_logo.png",
-  },
-];
-
-const apiSourceIds = new Set(["official", "guopin", "boss", "zhilian"]);
-
 export default function JobsPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState(defaultFilters);
   const [enabledSources, setEnabledSources] = useState(
     () => new Set(sourceCards.map((source) => source.id))
@@ -217,6 +107,22 @@ export default function JobsPage() {
       .finally(() => setDetailLoading(false));
   }
 
+  function analyzeJobMatch(job) {
+    if (!job) return;
+
+    writeStorage(
+      pendingAnalyzeJobKey,
+      JSON.stringify({
+        jobId: job.id,
+        title: job.title,
+        company: job.company,
+        jd: createJobDescription(job),
+        createdAt: new Date().toISOString(),
+      })
+    );
+    router.push("/analyze");
+  }
+
   return (
     <AppShell>
       <div className="flex flex-col gap-6 ">
@@ -233,14 +139,14 @@ export default function JobsPage() {
         </section>
 
         <section className="bg-surface rounded-lg overflow-hidden">
-          <div className="relative flex justify-between items-end border-b border-border bg-app-bg">
+          <div className="relative flex justify-between items-end border-b border-border bg-app-bg pt-2">
             <div className="relative flex min-w-0 gap-1 overflow-x-auto scrollbar-none">
               {categoryTabs.map((tab) => (
                 <button
                   className={
                     filters.category === tab.value
-                      ? "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-white px-3 text-base font-extrabold text-[#202434]"
-                      : "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-primary px-3 text-base font-extrabold text-white"
+                      ? "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-primary px-3 text-base font-extrabold text-white"
+                      : "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-white px-3 text-base font-extrabold text-black"
                   }
                   key={tab.value}
                   onClick={() => updateFilter("category", tab.value)}
@@ -254,6 +160,7 @@ export default function JobsPage() {
               style={{
                 width: 180,
                 right: 2,
+                bottom: 2,
                 marginLeft: 20,
               }}
               onChange={(event) => updateFilter("keyword", event.target.value)}
@@ -372,6 +279,7 @@ export default function JobsPage() {
           job={activeJob}
           loading={detailLoading}
           onClose={() => setDrawerOpen(false)}
+          onAnalyze={analyzeJobMatch}
           open={drawerOpen}
         />
       </div>
@@ -379,7 +287,7 @@ export default function JobsPage() {
   );
 }
 
-function JobDrawer({ job, loading, onClose, open }) {
+function JobDrawer({ job, loading, onAnalyze, onClose, open }) {
   return (
     <Drawer
       className="job-detail-drawer"
@@ -440,7 +348,12 @@ function JobDrawer({ job, loading, onClose, open }) {
             </section>
 
             <footer className="drawer-actions">
-              <Button className=" w-1/2" type="primary" size="large">
+              <Button
+                className=" w-1/2"
+                onClick={() => onAnalyze?.(job)}
+                type="primary"
+                size="large"
+              >
                 分析岗位匹配度
               </Button>
               <Button className=" w-1/2" size="large">
@@ -459,6 +372,25 @@ function JobDrawer({ job, loading, onClose, open }) {
       </Spin>
     </Drawer>
   );
+}
+
+function createJobDescription(job) {
+  const lines = [
+    `岗位名称：${job.title || ""}`,
+    `公司：${job.company || ""}`,
+    `方向：${job.direction || job.industry || ""}`,
+    `工作城市：${job.city || ""}`,
+    `学历要求：${job.degree || ""}`,
+    `届数要求：${job.cohort || ""}`,
+    `专业要求：${job.major || ""}`,
+    "",
+    "岗位要求：",
+    ...(job.requirements?.length
+      ? job.requirements.map((item) => `- ${item}`)
+      : ["- 暂无详细岗位要求"]),
+  ];
+
+  return lines.filter((line) => line !== undefined && line !== null).join("\n");
 }
 
 function createColumns() {
