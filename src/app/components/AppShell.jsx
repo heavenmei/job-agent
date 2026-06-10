@@ -5,21 +5,22 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   FileTextOutlined,
-  SearchOutlined,
+  CrownOutlined,
   SettingOutlined,
+  DatabaseOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Menu, theme, Button, Layout } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const { Header, Footer, Sider, Content } = Layout;
+const { Sider, Content } = Layout;
 
 const navItems = [
   {
     href: "/",
     key: "dashboard",
-    label: "控制台",
-    icon: <SearchOutlined />,
+    label: "首页",
+    icon: <CrownOutlined />,
   },
   {
     href: "/jobs",
@@ -38,6 +39,12 @@ const navItems = [
     key: "analyze",
     label: "匹配分析",
     icon: <BarChartOutlined />,
+  },
+  {
+    href: "/interview",
+    key: "interview",
+    label: "面试素材库",
+    icon: <DatabaseOutlined />,
   },
   {
     href: "/setting",
@@ -63,10 +70,10 @@ export function AppShell({ children }) {
         token: {
           borderRadius: 6,
           colorPrimary: "#5f55d8",
-          colorBgContainer: "#ffffff",
+          // colorBgContainer: "#ffffff",
           colorBorder: "#e1e6f0",
-          colorTextBase: "#202434",
-          colorBgSolid: "#5f55d8",
+          // colorTextBase: "#202434",
+          // colorBgSolid: "#5f55d8",
           fontFamily:
             'Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
           fontSize: 12,

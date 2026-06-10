@@ -395,6 +395,133 @@
   font-weight: 900;
 }
 
+.resume-compare-grid {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.resume-diff-pane {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e1e6f0;
+  border-radius: 8px;
+  background: #fbfcff;
+}
+
+.resume-diff-pane > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e1e6f0;
+  background: #ffffff;
+  padding: 12px 14px;
+}
+
+.resume-diff-pane h2,
+.resume-diff-pane p {
+  margin: 0;
+}
+
+.resume-diff-pane h2 {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.resume-diff-pane p,
+.resume-diff-pane > header span {
+  margin-top: 4px;
+  color: #687085;
+  font-weight: 800;
+}
+
+.resume-code-editor {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.resume-code-gutter {
+  overflow: hidden;
+  border-right: 1px solid #e1e6f0;
+  background: #f2f4fa;
+  color: #687085;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 13px;
+  line-height: 22px;
+  user-select: none;
+}
+
+.resume-code-gutter span {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  height: 22px;
+  padding: 0 8px;
+}
+
+.resume-code-gutter b {
+  text-align: center;
+}
+
+.resume-code-gutter span.added {
+  background: #dff8eb;
+  color: #1c7c4c;
+}
+
+.resume-code-gutter span.removed {
+  background: #ffe5df;
+  color: #b83b34;
+}
+
+.resume-code-editor textarea {
+  min-height: 100%;
+  resize: none;
+  border: 0;
+  outline: none;
+  background: #ffffff;
+  padding: 0 12px 16px;
+  color: #30364a;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 13px;
+  line-height: 22px;
+  white-space: pre;
+}
+
+.resume-diff-pane.base .resume-code-editor textarea {
+  box-shadow: inset 3px 0 0 rgba(231, 90, 84, 0.18);
+}
+
+.resume-diff-pane.target .resume-code-editor textarea {
+  box-shadow: inset 3px 0 0 rgba(35, 198, 107, 0.18);
+}
+
+.resume-diff-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-top: 1px solid #edf0f6;
+  padding-top: 12px;
+  color: #687085;
+  font-weight: 900;
+}
+
+.resume-diff-summary span {
+  border-radius: 999px;
+  background: #f2f4fa;
+  padding: 5px 10px;
+}
+
+.resume-diff-summary b {
+  color: #4f46c8;
+}
+
 
 
 .resume-target-form {
@@ -453,7 +580,8 @@
   }
 
   .resume-compare-toolbar,
-  .resume-compare-selects {
+  .resume-compare-selects,
+  .resume-compare-grid {
     grid-template-columns: 1fr;
     flex-direction: column;
   }

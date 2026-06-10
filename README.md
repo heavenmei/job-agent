@@ -1,35 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# AI 求职智能匹配智能体方案说明
 
-## Getting Started
+## 1. 问题诊断
+学生求职的核心痛点有两类：一是岗位分散在官网、国聘、Boss、智联等多个渠道，筛选高匹配岗位成本高；二是即使找到目标岗位，也难以判断简历与 JD 的匹配度，不清楚哪些表述会影响初筛通过率。传统海投效率低，且缺少针对性反馈。
 
-First, run the development server:
+## 2. 方案设计
+本系统将学生求职流程拆为“找岗位 - 改简历 - 做匹配 - 备面试”四步，并用 AI 串成闭环：
+- 岗位列表：聚合多来源岗位，支持按专业、学历、城市、关键词筛选，降低搜岗成本。
+- AI 改简历：支持上传、编辑、版本对比与岗位定向优化，沉淀多份简历版本。
+- 匹配分析：输入简历和岗位 JD，输出匹配度、ATS 关键词命中、简历优缺点与改写建议。
+- 面试素材库：基于简历和 JD 自动生成面试提问、参考回答和准备建议，提升后续面试准备效率。
+- 模型设置：支持切换模型、温度、Token、超时等参数，便于调优生成效果。
 
-```bash
-npm run dev
-# or
+## 3. AI 工具选型理由
+前端采用 Next.js + Ant Design，适合快速构建多页面求职工作台；大模型接口采用兼容 OpenAI SDK 的方式，默认接入 DashScope/Qwen，也支持 OpenAI 与自定义兼容接口，便于在成本、速度和效果之间灵活取舍。Qwen 在中文 JD 理解、信息抽取和结构化输出上表现稳定，适合本场景。
 
-pm2 start npm --name "job-agent" -- start
+## 4. 关键配置
+- `DASHSCOPE_API_KEY`：默认模型服务密钥
+- `DASHSCOPE_API_BASE`：兼容接口地址
+- `DASHSCOPE_MODEL`：默认模型名称
+- 本地可在“模型设置”页配置 `provider`、`model`、`temperature`、`topP`、`maxTokens`、`timeout`
 
-pm2 restart/stop/ job-agent
-```
+## 5. 迭代记录
+第一版完成岗位检索与简历管理；第二版加入岗位匹配分析与 ATS 关键词命中；第三版新增面试素材库和首页重构，使系统升级为完整求职流程助手。
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 6. 效果评估
+系统预期可显著减少学生在搜岗、改简历、准备面试上的重复劳动。评估指标包括：岗位筛选耗时、岗位匹配准确性、简历改写采纳率、ATS 命中提升幅度，以及用户对面试素材实用性的主观评分。整体目标是帮助学生更快找到适合岗位，并提升心仪岗位的初筛命中率。

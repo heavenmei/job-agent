@@ -34,6 +34,7 @@ export default function AnalyzePage() {
   const [analysis, setAnalysis] = useState(null);
   const [selectedAnalysisKey, setSelectedAnalysisKey] = useState("");
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [rewriteApplying, setRewriteApplying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,7 +191,7 @@ export default function AnalyzePage() {
     setAnalysis(entry?.analysis || null);
   }
 
-  function applyRewriteSuggestions(suggestions) {
+  async function applyRewriteSuggestions(suggestions) {
     if (!resumeText.trim()) {
       message.warning("请先选择或上传简历");
       return;
@@ -201,27 +202,92 @@ export default function AnalyzePage() {
       return;
     }
 
-    const nextResume = applySuggestionsToResume(resumeText, suggestions);
-    const sourceTitle = resumeItem?.title || resumeItem?.version || "简历";
-    const nextItem = createResumeItem(resumeItems.length + 1, nextResume, {
-      title: `${sourceTitle} - 岗位优化版`,
-      version: "岗位匹配优化",
-      role: targetForm.jobTitle || resumeItem?.role || "",
-      highlight: resumeItem?.highlight || [],
-      matchAnalysis: resumeItem?.matchAnalysis || {},
-      active: true,
-    });
-    const nextItems = setActiveResumeItem(
-      [nextItem, ...resumeItems],
-      nextItem.id
-    );
+    const analysisKey =
+      selectedAnalysisKey || getAnalysisEntryForJd(resumeItem, jdText)?.key;
 
-    setResumeItems(nextItems);
-    setResumeItem(nextItem);
-    setResumeText(nextResume);
-    persistResumeItems(nextItems);
-    message.success("已创建新的优化简历");
-    router.push("/resume");
+    if (!analysisKey) {
+      message.warning("请先完成当前岗位 JD 的分析");
+      return;
+    }
+
+    setRewriteApplying(true);
+
+    try {
+      const response = await fetch("/api/resume/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jd: jdText,
+          resume: resumeText,
+          suggestions,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "简历优化失败");
+      }
+
+      const storedItems = readResumeItems();
+      const sourceResume =
+        storedItems.find((item) => item.id === resumeItem?.id) ||
+        getActiveResumeItem(storedItems);
+      const sourceEntry = sourceResume?.matchAnalysis?.[analysisKey];
+      const existingOptimizedId = sourceEntry?.optimizedResumeId;
+      const existingOptimizedResume = storedItems.find(
+        (item) => item.id === existingOptimizedId
+      );
+      const sourceTitle = sourceResume?.title || sourceResume?.version || "简历";
+
+      let nextItems;
+      let optimizedResumeId;
+
+      if (existingOptimizedResume) {
+        optimizedResumeId = existingOptimizedResume.id;
+        nextItems = updateResumeItem(storedItems, optimizedResumeId, {
+          resume: data.resume,
+          title: `${sourceTitle} - 岗位优化版`,
+          version: "岗位匹配优化",
+          role: targetForm.jobTitle || sourceResume?.role || "",
+          highlight: sourceResume?.highlight || [],
+          matchAnalysis: sourceResume?.matchAnalysis || {},
+        });
+      } else {
+        const nextItem = createResumeItem(storedItems.length + 1, data.resume, {
+          title: `${sourceTitle} - 岗位优化版`,
+          version: "岗位匹配优化",
+          role: targetForm.jobTitle || sourceResume?.role || "",
+          highlight: sourceResume?.highlight || [],
+          matchAnalysis: sourceResume?.matchAnalysis || {},
+          active: true,
+        });
+        optimizedResumeId = nextItem.id;
+        nextItems = setActiveResumeItem([nextItem, ...storedItems], nextItem.id);
+      }
+
+      nextItems = updateResumeItem(nextItems, sourceResume.id, {
+        matchAnalysis: {
+          ...(sourceResume?.matchAnalysis || {}),
+          [analysisKey]: {
+            ...(sourceEntry || {}),
+            optimizedResumeId,
+          },
+        },
+      });
+
+      persistResumeItems(nextItems);
+      setResumeItems(nextItems);
+      message.success(existingOptimizedResume ? "已更新优化简历" : "已创建优化简历");
+      router.push(
+        `/resume?mode=compare&base=${encodeURIComponent(
+          sourceResume.id
+        )}&target=${encodeURIComponent(optimizedResumeId)}`
+      );
+    } catch (error) {
+      message.error(error.message || "简历优化失败");
+    } finally {
+      setRewriteApplying(false);
+    }
   }
 
   const analysisEntries = getAnalysisEntries(resumeItem);
@@ -275,6 +341,7 @@ export default function AnalyzePage() {
             <AnalysisResult
               analysis={analysis}
               onApplyRewriteSuggestions={applyRewriteSuggestions}
+              rewriteApplying={rewriteApplying}
             />
           </section>
         </div>
@@ -365,38 +432,6 @@ function readPendingAnalyzeJob() {
 
 function countReadableChars(value) {
   return String(value || "").replace(/\s/g, "").length;
-}
-
-function applySuggestionsToResume(resume, suggestions) {
-  let nextResume = resume;
-  const unappliedSuggestions = [];
-
-  suggestions.forEach((suggestion) => {
-    const before = String(suggestion.before || "").trim();
-    const after = String(suggestion.after || "").trim();
-
-    if (!after) return;
-
-    if (before && nextResume.includes(before)) {
-      nextResume = nextResume.replace(before, after);
-    } else {
-      unappliedSuggestions.push(suggestion);
-    }
-  });
-
-  if (unappliedSuggestions.length === 0) return nextResume;
-
-  return `${nextResume.trim()}\n\n## 岗位匹配优化建议\n\n${unappliedSuggestions
-    .map((suggestion, index) =>
-      [
-        `### ${index + 1}. ${suggestion.section || "简历内容"}`,
-        suggestion.after ? suggestion.after : "",
-        suggestion.reason ? `> ${suggestion.reason}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n")
-    )
-    .join("\n\n")}\n`;
 }
 
 function getAnalysisEntries(resumeItem) {

@@ -15,6 +15,7 @@ export function createResumeItem(index, resume = "", overrides = {}) {
     resume,
     highlight: [],
     matchAnalysis: {},
+    interviewMaterials: {},
     active: index === 1,
     ...overrides,
   };
@@ -30,6 +31,7 @@ export function createInitialResumeItem() {
     resume: "",
     highlight: [],
     matchAnalysis: {},
+    interviewMaterials: {},
     active: true,
   };
 }
@@ -54,6 +56,7 @@ export function normalizeResumeItems(items) {
     resume: item.resume || "",
     highlight: Array.isArray(item.highlight) ? item.highlight : [],
     matchAnalysis: normalizeMatchAnalysis(item.matchAnalysis),
+    interviewMaterials: normalizeInterviewMaterials(item.interviewMaterials),
   }));
 }
 
@@ -73,6 +76,11 @@ function normalizeMatchAnalysis(matchAnalysis) {
   }
 
   return matchAnalysis;
+}
+
+function normalizeInterviewMaterials(interviewMaterials) {
+  if (!interviewMaterials || typeof interviewMaterials !== "object") return {};
+  return interviewMaterials;
 }
 
 export function readResumeItems() {

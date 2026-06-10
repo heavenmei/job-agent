@@ -457,6 +457,12 @@
   line-height: 1.6;
 }
 
+.rewrite-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .rewrite-list {
   display: grid;
   gap: 12px;
@@ -477,15 +483,10 @@
   gap: 10px;
 }
 
-.rewrite-list header span {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 999px;
-  background: #f3f1ff;
-  color: #5f55d8;
-  font-weight: 900;
+.rewrite-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .rewrite-list header b {
@@ -499,19 +500,7 @@
   gap: 12px;
 }
 
-.rewrite-compare div {
-  border-radius: 6px;
-  padding: 12px;
-  background: #ffffff;
-}
-
-.rewrite-compare strong {
-  display: block;
-  margin-bottom: 8px;
-  color: #4b5168;
-}
-
-.rewrite-compare p,
+/* .rewrite-compare p,
 .rewrite-list footer {
   margin: 0;
   color: #687085;
@@ -525,7 +514,7 @@
   gap: 12px;
   border-top: 1px solid #edf0f6;
   padding-top: 10px;
-}
+} */
 
 .rewrite-list footer span {
   min-width: 0;
@@ -559,6 +548,7 @@
   }
 
   .rewrite-card-title,
+  .rewrite-card-actions,
   .rewrite-list footer {
     align-items: stretch;
     flex-direction: column;

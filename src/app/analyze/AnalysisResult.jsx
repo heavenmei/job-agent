@@ -1,3 +1,5 @@
+"use client";
+
 import {
   CheckCircleFilled,
   CloseCircleFilled,
@@ -6,7 +8,10 @@ import {
   MinusCircleFilled,
   InfoCircleFilled,
 } from "@ant-design/icons";
-import { Button, Progress } from "antd";
+import { Button, Checkbox, Progress } from "antd";
+import { useEffect, useState } from "react";
+
+const EMPTY_SUGGESTIONS = [];
 
 const dimensionColors = {
   skills: "#5f55d8",
@@ -16,7 +21,27 @@ const dimensionColors = {
   growth: "#23c66b",
 };
 
-export default function AnalysisResult({ analysis }) {
+export default function AnalysisResult({
+  analysis,
+  onApplyRewriteSuggestions,
+  rewriteApplying = false,
+}) {
+  const suggestions = analysis?.rewriteSuggestions || EMPTY_SUGGESTIONS;
+  const [selectedIndexes, setSelectedIndexes] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setSelectedIndexes(suggestions.map((_, index) => index));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [suggestions]);
+
   if (!analysis) {
     return (
       <div className="analyze-empty">
@@ -33,11 +58,15 @@ export default function AnalysisResult({ analysis }) {
   const match = analysis.match || {};
   const ats = analysis.ats || {};
 
+  const selectedSuggestions = selectedIndexes
+    .map((index) => suggestions[index])
+    .filter(Boolean);
+
   return (
     <div className="analysis-result">
       <article className="score-card">
         <div>
-          <span>岗位匹配度</span>
+          <h1>岗位匹配度</h1>
           <strong>{match.current || 0}%</strong>
           <p>{match.summary}</p>
           <div className="optimized-score">
@@ -112,40 +141,77 @@ export default function AnalysisResult({ analysis }) {
         <header className="rewrite-card-title">
           <div>
             <h2>优化改写建议</h2>
-            <p>应用建议后会创建一份新简历，可继续在简历修改页面编辑。</p>
+            <p>勾选要采纳的建议后，会生成或更新当前 JD 对应的优化简历。</p>
           </div>
-          <Button
-            disabled={!analysis.rewriteSuggestions?.length}
-            icon={<FileAddOutlined />}
-            onClick={() =>
-              onApplyRewriteSuggestions?.(analysis.rewriteSuggestions || [])
-            }
-            type="primary"
-          >
-            应用全部建议
-          </Button>
+          <div className="rewrite-card-actions">
+            <Checkbox
+              checked={
+                selectedIndexes.length === suggestions.length &&
+                suggestions.length > 0
+              }
+              indeterminate={
+                selectedIndexes.length > 0 &&
+                selectedIndexes.length < suggestions.length
+              }
+              onChange={(event) =>
+                setSelectedIndexes(
+                  event.target.checked
+                    ? suggestions.map((_, index) => index)
+                    : []
+                )
+              }
+            >
+              全选
+            </Checkbox>
+            <Button
+              disabled={!selectedSuggestions.length}
+              icon={<FileAddOutlined />}
+              loading={rewriteApplying}
+              onClick={() => onApplyRewriteSuggestions?.(selectedSuggestions)}
+              type="primary"
+            >
+              应用选中建议
+            </Button>
+          </div>
         </header>
         <div className="rewrite-list">
-          {(analysis.rewriteSuggestions || []).map((item, index) => (
+          {suggestions.map((item, index) => (
             <article key={`${item.section}-${index}`}>
               <header>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <b>{item.section}</b>
+                <div className="rewrite-item-head">
+                  <Checkbox
+                    checked={selectedIndexes.includes(index)}
+                    onChange={(event) =>
+                      setSelectedIndexes((current) =>
+                        event.target.checked
+                          ? [...current, index].sort((a, b) => a - b)
+                          : current.filter((itemIndex) => itemIndex !== index)
+                      )
+                    }
+                  />
+                  <div className="flex w-8 h-8 rounded-full bg-primary text-white justify-center items-center">
+                    {String(index + 1).padStart(2, "0")}
+                  </div>
+                  <b>{item.section}</b>
+                </div>
               </header>
               <div className="rewrite-compare">
-                <div>
+                <div className="bg-surface p-2 rounded-xl border border-border">
                   <strong>原表达</strong>
                   <p>{item.before}</p>
                 </div>
-                <div>
+                <div className="bg-border p-2 rounded-xl">
                   <strong>建议改写</strong>
                   <p>{item.after}</p>
                 </div>
               </div>
-              <footer>
+              <footer className="flex justify-between items-center gap-2">
                 <span>{item.reason}</span>
                 <Button
+                  color="primary"
+                  variant="outlined"
                   icon={<FileAddOutlined />}
+                  loading={rewriteApplying}
                   onClick={() => onApplyRewriteSuggestions?.([item])}
                 >
                   应用此建议
