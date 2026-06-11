@@ -18,6 +18,7 @@ import {
   getActiveResumeItem,
   updateResumeItem,
 } from "../storage";
+import { readSavedLlmSettings, withLlmSettings } from "../llmSettings";
 
 const { Dragger } = Upload;
 
@@ -111,6 +112,10 @@ export default function ResumeDisplay({
     name: "file",
     multiple: true,
     action: "/api/resume/parse",
+    data: () => {
+      const llmSettings = readSavedLlmSettings();
+      return llmSettings ? { llmSettings: JSON.stringify(llmSettings) } : {};
+    },
     onChange(info) {
       const { status } = info.file;
       if (status !== "uploading") {
@@ -140,7 +145,7 @@ export default function ResumeDisplay({
       const response = await fetch("/api/resume/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume }),
+        body: JSON.stringify(withLlmSettings({ resume })),
       });
 
       const data = await response.json();
@@ -186,7 +191,7 @@ export default function ResumeDisplay({
             className="grid min-h-37 grid-cols-[48px_minmax(0,1fr)] gap-4 rounded-[7px] border border-app-border bg-surface-muted p-4 max-[720px]:min-h-0 max-[720px]:p-4"
             key={`${item.number}-${item.title}`}
           >
-            <span className="grid h-11 w-11 place-items-center rounded-full border border-primary-border bg-primary-soft text-[17px] font-black text-primary">
+            <span className="grid h-11 w-11 place-items-center rounded-full border border-primary-border bg-primary text-[17px] font-black text-white">
               {item.number || String(index + 1).padStart(2, "0")}
             </span>
             <div>

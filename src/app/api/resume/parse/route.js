@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { PDFParse } from "pdf-parse";
 import { errorJson, json } from "../../_response.js";
 import { callLLM } from "../../_llm.js";
+import { parseLlmSettings } from "../../../llmSettings";
 
 export const runtime = "nodejs";
 
@@ -22,6 +23,7 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
+    const llmSettings = parseLlmSettings(formData.get("llmSettings"), null);
 
     if (!file || typeof file === "string") {
       const error = new Error("请上传简历文件");
@@ -52,7 +54,7 @@ export async function POST(request) {
 
     console.log("PDFParse done");
 
-    const markdown = await toMarkdownWithLlm(result.text || "");
+    const markdown = await toMarkdownWithLlm(result.text || "", llmSettings);
 
     return json({
       markdown,
@@ -80,13 +82,19 @@ function toMarkdown(text) {
     .join("\n");
 }
 
-async function toMarkdownWithLlm(text) {
+async function toMarkdownWithLlm(text, llmSettings) {
   const fallback = () => toMarkdown(text);
 
-  if (!process.env.DASHSCOPE_API_KEY || !text.trim()) return fallback();
+  if (
+    (!llmSettings?.apiKey && !process.env.DASHSCOPE_API_KEY) ||
+    !text.trim()
+  ) {
+    return fallback();
+  }
 
   try {
     const markdown = await callLLM({
+      llmSettings,
       messages: [
         {
           role: "system",

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import AnalysisResult from "./AnalysisResult";
 import { AppShell } from "../components/AppShell";
 import { pendingAnalyzeJobKey } from "../config";
+import { withLlmSettings } from "../llmSettings";
 import {
   createResumeItem,
   createInitialResumeItems,
@@ -17,7 +18,7 @@ import {
   setActiveResumeItem,
   updateResumeItem,
 } from "../storage";
-import { readStorage, writeStorage } from "../util";
+import { readStorage, removeStorage } from "../util";
 import "./page.css";
 
 export default function AnalyzePage() {
@@ -120,11 +121,11 @@ export default function AnalyzePage() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(withLlmSettings({
           resume: resumeText,
           jd: jdText,
           resumeHighlight: resumeItem?.highlight || [],
-        }),
+        })),
       });
       const data = await response.json();
 
@@ -216,11 +217,11 @@ export default function AnalyzePage() {
       const response = await fetch("/api/resume/rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(withLlmSettings({
           jd: jdText,
           resume: resumeText,
           suggestions,
-        }),
+        })),
       });
       const data = await response.json();
 
@@ -340,6 +341,7 @@ export default function AnalyzePage() {
           <section className="min-h-0 overflow-auto analyze-result-panel">
             <AnalysisResult
               analysis={analysis}
+              loading={analysisLoading}
               onApplyRewriteSuggestions={applyRewriteSuggestions}
               rewriteApplying={rewriteApplying}
             />
@@ -421,7 +423,7 @@ function readPendingAnalyzeJob() {
 
   if (!savedJob) return null;
 
-  writeStorage(pendingAnalyzeJobKey, "");
+  removeStorage(pendingAnalyzeJobKey);
 
   try {
     return JSON.parse(savedJob);

@@ -12,6 +12,7 @@ import {
   filterRows,
   defaultFilters,
   pendingAnalyzeJobKey,
+  pendingInterviewJobKey,
   sourceCards,
   apiSourceIds,
 } from "../config";
@@ -110,17 +111,15 @@ export default function JobsPage() {
   function analyzeJobMatch(job) {
     if (!job) return;
 
-    writeStorage(
-      pendingAnalyzeJobKey,
-      JSON.stringify({
-        jobId: job.id,
-        title: job.title,
-        company: job.company,
-        jd: createJobDescription(job),
-        createdAt: new Date().toISOString(),
-      })
-    );
+    writePendingJob(pendingAnalyzeJobKey, job);
     router.push("/analyze");
+  }
+
+  function prepareInterview(job) {
+    if (!job) return;
+
+    writePendingJob(pendingInterviewJobKey, job);
+    router.push("/interview");
   }
 
   return (
@@ -280,6 +279,7 @@ export default function JobsPage() {
           loading={detailLoading}
           onClose={() => setDrawerOpen(false)}
           onAnalyze={analyzeJobMatch}
+          onInterview={prepareInterview}
           open={drawerOpen}
         />
       </div>
@@ -287,7 +287,7 @@ export default function JobsPage() {
   );
 }
 
-function JobDrawer({ job, loading, onAnalyze, onClose, open }) {
+function JobDrawer({ job, loading, onAnalyze, onClose, onInterview, open }) {
   return (
     <Drawer
       className="job-detail-drawer"
@@ -356,6 +356,13 @@ function JobDrawer({ job, loading, onAnalyze, onClose, open }) {
               >
                 分析岗位匹配度
               </Button>
+              <Button
+                className="w-1/2"
+                onClick={() => onInterview?.(job)}
+                size="large"
+              >
+                面试素材分析
+              </Button>
               <Button className=" w-1/2" size="large">
                 前往投递
               </Button>
@@ -371,6 +378,19 @@ function JobDrawer({ job, loading, onAnalyze, onClose, open }) {
         )}
       </Spin>
     </Drawer>
+  );
+}
+
+function writePendingJob(storageKey, job) {
+  writeStorage(
+    storageKey,
+    JSON.stringify({
+      jobId: job.id,
+      title: job.title,
+      company: job.company,
+      jd: createJobDescription(job),
+      createdAt: new Date().toISOString(),
+    })
   );
 }
 

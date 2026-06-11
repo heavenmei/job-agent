@@ -4,6 +4,8 @@ import { ThunderboltOutlined } from "@ant-design/icons";
 import { Button, Input, Select, message } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { pendingInterviewJobKey } from "../config";
+import { withLlmSettings } from "../llmSettings";
 import {
   createInitialResumeItems,
   getActiveResumeItem,
@@ -13,6 +15,7 @@ import {
   setActiveResumeItem,
   updateResumeItem,
 } from "../storage";
+import { readStorage, removeStorage } from "../util";
 import InterviewMaterialResult from "./InterviewMaterialResult";
 import "../analyze/page.css";
 import "./page.css";
@@ -41,19 +44,27 @@ export default function InterviewPage() {
       const storedItems = readResumeItems();
       const activeResume = getActiveResumeItem(storedItems);
       const latestEntry = getLatestInterviewEntry(activeResume);
-      const initialJd = latestEntry?.jd || "";
+      const pendingJob = readPendingInterviewJob();
+      const pendingEntry = pendingJob?.jd
+        ? getInterviewEntryForJd(activeResume, pendingJob.jd)
+        : null;
+      const initialJd = pendingJob?.jd || latestEntry?.jd || "";
 
       setResumeItems(storedItems);
       setResumeText(readActiveResume());
       setResumeItem(activeResume);
-      setSelectedMaterialKey(latestEntry?.key || "");
+      setSelectedMaterialKey(pendingEntry?.key || latestEntry?.key || "");
       setJdText(initialJd);
       setTargetForm({
-        company: latestEntry?.company || "",
-        jobTitle: latestEntry?.jobTitle || "",
+        company: pendingJob?.company || latestEntry?.company || "",
+        jobTitle: pendingJob?.title || latestEntry?.jobTitle || "",
         jd: initialJd,
       });
-      setMaterialResult(latestEntry?.result || null);
+      setMaterialResult(
+        pendingEntry?.result ||
+          (pendingJob ? null : latestEntry?.result) ||
+          null
+      );
     });
 
     return () => {
@@ -112,11 +123,11 @@ export default function InterviewPage() {
       const response = await fetch("/api/interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(withLlmSettings({
           resume: resumeText,
           jd: jdText,
           resumeHighlight: resumeItem?.highlight || [],
-        }),
+        })),
       });
       const data = await response.json();
 
@@ -268,6 +279,7 @@ export default function InterviewPage() {
 
           <section className="min-h-0 overflow-auto analyze-result-panel">
             <InterviewMaterialResult
+              loading={materialLoading}
               downloading={downloading}
               materialResult={materialResult}
               onDownload={downloadMaterials}
@@ -367,6 +379,20 @@ function getInterviewEntryForJd(resumeItem, jd) {
   if (!jd?.trim()) return null;
   const key = createJdKey(jd);
   return resumeItem?.interviewMaterials?.[key] || null;
+}
+
+function readPendingInterviewJob() {
+  const savedJob = readStorage(pendingInterviewJobKey);
+
+  if (!savedJob) return null;
+
+  removeStorage(pendingInterviewJobKey);
+
+  try {
+    return JSON.parse(savedJob);
+  } catch {
+    return null;
+  }
 }
 
 function createJdKey(jd) {

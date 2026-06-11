@@ -81,6 +81,85 @@
   white-space: pre-wrap;
 }
 
+.interview-loading {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  border: 1px solid #e1e6f0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(29, 35, 54, 0.06);
+}
+
+.interview-loading-badge {
+  display: grid;
+  width: 84px;
+  height: 84px;
+  place-items: center;
+  border-radius: 999px;
+  background: radial-gradient(circle at top, #7b72ef 0%, #5f55d8 100%);
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 900;
+  box-shadow: 0 16px 30px rgba(95, 85, 216, 0.22);
+}
+
+.interview-loading h2,
+.interview-loading p {
+  margin: 0;
+}
+
+.interview-loading h2 {
+  color: #202434;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.interview-loading p {
+  max-width: 420px;
+  color: #687085;
+  line-height: 1.75;
+}
+
+.interview-loading-track {
+  width: min(420px, 100%);
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8ecf6;
+}
+
+.interview-loading-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5f55d8 0%, #8d84ff 100%);
+  transition: width 0.35s ease;
+}
+
+.interview-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  width: min(420px, 100%);
+}
+
+.interview-loading-grid span {
+  border-radius: 999px;
+  background: #eef1f7;
+  padding: 8px 0;
+  color: #98a0b3;
+  font-weight: 800;
+}
+
+.interview-loading-grid span.done {
+  background: #ebe9ff;
+  color: #4f46c8;
+}
+
 @media (max-width: 1024px) {
   .interview-material-body,
   .interview-overview-card {

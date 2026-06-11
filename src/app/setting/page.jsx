@@ -28,7 +28,11 @@ import {
   llmProviderOptions,
   llmSettingsStorageKey,
 } from "../config";
-import { readStorage, writeStorage } from "../util";
+import {
+  normalizeLlmSettings,
+  readLlmSettingsFromStorage,
+} from "../llmSettings";
+import { removeStorage, writeStorage } from "../util";
 
 export default function SettingPage() {
   const [form] = Form.useForm();
@@ -40,7 +44,7 @@ export default function SettingPage() {
     queueMicrotask(() => {
       if (cancelled) return;
 
-      const savedSettings = readLlmSettings();
+      const savedSettings = readLlmSettingsFromStorage();
 
       setSettings(savedSettings);
       form.setFieldsValue(savedSettings);
@@ -74,7 +78,7 @@ export default function SettingPage() {
   }
 
   function resetSettings() {
-    writeStorage(llmSettingsStorageKey, "");
+    removeStorage(llmSettingsStorageKey);
     setSettings(defaultLlmSettings);
     form.setFieldsValue(defaultLlmSettings);
     message.success("已恢复默认设置");
@@ -258,49 +262,6 @@ export default function SettingPage() {
       </div>
     </AppShell>
   );
-}
-
-function readLlmSettings() {
-  const savedSettings = readStorage(llmSettingsStorageKey);
-
-  if (!savedSettings) return defaultLlmSettings;
-
-  try {
-    return normalizeLlmSettings(JSON.parse(savedSettings));
-  } catch {
-    return defaultLlmSettings;
-  }
-}
-
-function normalizeLlmSettings(settings = {}) {
-  return {
-    ...defaultLlmSettings,
-    ...settings,
-    apiKey: typeof settings.apiKey === "string" ? settings.apiKey.trim() : "",
-    temperature: clampNumber(
-      settings.temperature,
-      0,
-      2,
-      defaultLlmSettings.temperature
-    ),
-    topP: clampNumber(settings.topP, 0, 1, defaultLlmSettings.topP),
-    maxTokens: clampNumber(
-      settings.maxTokens,
-      256,
-      32768,
-      defaultLlmSettings.maxTokens
-    ),
-    timeout: clampNumber(settings.timeout, 10, 300, defaultLlmSettings.timeout),
-    enableThinking: Boolean(settings.enableThinking),
-  };
-}
-
-function clampNumber(value, min, max, fallback) {
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) return fallback;
-
-  return Math.min(max, Math.max(min, number));
 }
 
 function providerLabel(value) {

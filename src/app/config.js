@@ -1,5 +1,6 @@
 export const resumeStorageKey = "job-agent.resume.items";
 export const pendingAnalyzeJobKey = "job-agent.pending-analyze-job";
+export const pendingInterviewJobKey = "job-agent.pending-interview-job";
 export const llmSettingsStorageKey = "job-agent.llm.settings";
 
 export const defaultLlmSettings = {

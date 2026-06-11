@@ -3,95 +3,15 @@
 import { Select } from "antd";
 import { useMemo } from "react";
 
-function createUnifiedDiff(baseText, targetText) {
-  const baseLines = String(baseText || "").split("\n");
-  const targetLines = String(targetText || "").split("\n");
-  const lcs = Array.from({ length: baseLines.length + 1 }, () =>
-    Array(targetLines.length + 1).fill(0)
-  );
-
-  for (let baseIndex = baseLines.length - 1; baseIndex >= 0; baseIndex -= 1) {
-    for (
-      let targetIndex = targetLines.length - 1;
-      targetIndex >= 0;
-      targetIndex -= 1
-    ) {
-      lcs[baseIndex][targetIndex] =
-        baseLines[baseIndex] === targetLines[targetIndex]
-          ? lcs[baseIndex + 1][targetIndex + 1] + 1
-          : Math.max(
-              lcs[baseIndex + 1][targetIndex],
-              lcs[baseIndex][targetIndex + 1]
-            );
-    }
-  }
-
-  const diffLines = [];
-  let baseIndex = 0;
-  let targetIndex = 0;
-
-  while (baseIndex < baseLines.length && targetIndex < targetLines.length) {
-    if (baseLines[baseIndex] === targetLines[targetIndex]) {
-      diffLines.push({
-        sign: " ",
-        text: baseLines[baseIndex],
-        type: "context",
-      });
-      baseIndex += 1;
-      targetIndex += 1;
-    } else if (
-      lcs[baseIndex + 1][targetIndex] >= lcs[baseIndex][targetIndex + 1]
-    ) {
-      diffLines.push({
-        sign: "-",
-        text: baseLines[baseIndex],
-        type: "removed",
-      });
-      baseIndex += 1;
-    } else {
-      diffLines.push({
-        sign: "+",
-        text: targetLines[targetIndex],
-        type: "added",
-      });
-      targetIndex += 1;
-    }
-  }
-
-  while (baseIndex < baseLines.length) {
-    diffLines.push({
-      sign: "-",
-      text: baseLines[baseIndex],
-      type: "removed",
-    });
-    baseIndex += 1;
-  }
-
-  while (targetIndex < targetLines.length) {
-    diffLines.push({
-      sign: "+",
-      text: targetLines[targetIndex],
-      type: "added",
-    });
-    targetIndex += 1;
-  }
-
-  return diffLines.filter(
-    (line) => line.type !== "context" || line.text.trim()
-  );
-}
-
 export default function VersionCompare({
   baseResume,
   onBaseChange,
-  onResumeChange,
   onTargetChange,
   resumeItems,
   targetResume,
 }) {
-  const diffLines = useMemo(
-    () =>
-      createUnifiedDiff(baseResume?.resume || "", targetResume?.resume || ""),
+  const diffRows = useMemo(
+    () => createDiffRows(baseResume?.resume || "", targetResume?.resume || ""),
     [baseResume?.resume, targetResume?.resume]
   );
   const resumeOptions = resumeItems.map((item) => ({
@@ -100,10 +20,10 @@ export default function VersionCompare({
     }`,
     value: item.id,
   }));
-  const lineMarkers = useMemo(
-    () => createLineMarkers(diffLines),
-    [diffLines]
-  );
+  const addedCount = diffRows.filter((row) => row.type === "added").length;
+  const removedCount = diffRows.filter((row) => row.type === "removed").length;
+  const changedCount = diffRows.filter((row) => row.type === "changed").length;
+  const contextCount = diffRows.filter((row) => row.type === "context").length;
 
   return (
     <section className="resume-compare-panel">
@@ -133,42 +53,40 @@ export default function VersionCompare({
       </header>
 
       <div className="resume-compare-grid">
-        <EditableDiffPane
+        <DiffColumn
           label="基准版本"
-          markers={lineMarkers.base}
-          onChange={(value) => onResumeChange?.(baseResume?.id, value)}
           resume={baseResume}
+          rows={diffRows}
           side="base"
         />
-        <EditableDiffPane
+        <DiffColumn
           label="目标版本"
-          markers={lineMarkers.target}
-          onChange={(value) => onResumeChange?.(targetResume?.id, value)}
           resume={targetResume}
+          rows={diffRows}
           side="target"
         />
       </div>
 
       <div className="resume-diff-summary">
         <span>
-          <b>{diffLines.filter((line) => line.type === "added").length}</b>{" "}
-          新增
+          <b>{addedCount}</b> 新增
         </span>
         <span>
-          <b>{diffLines.filter((line) => line.type === "removed").length}</b>{" "}
-          删除
+          <b>{removedCount}</b> 删除
         </span>
         <span>
-          <b>{diffLines.filter((line) => line.type === "context").length}</b>{" "}
-          保留
+          <b>{changedCount}</b> 修改
+        </span>
+        <span>
+          <b>{contextCount}</b> 保留
         </span>
       </div>
     </section>
   );
 }
 
-function EditableDiffPane({ label, markers, onChange, resume, side }) {
-  const lines = String(resume?.resume || "").split("\n");
+function DiffColumn({ label, resume, rows, side }) {
+  const lineCount = String(resume?.resume || "").split("\n").length;
 
   return (
     <article className={`resume-diff-pane ${side}`}>
@@ -177,55 +95,204 @@ function EditableDiffPane({ label, markers, onChange, resume, side }) {
           <h2>{label}</h2>
           <p>{resume?.title || resume?.version || "未命名简历"}</p>
         </div>
-        <span>{lines.length} 行</span>
+        <span>{lineCount} 行</span>
       </header>
 
-      <div className="resume-code-editor">
-        <div className="resume-code-gutter" aria-hidden="true">
-          {lines.map((_, index) => {
-            const marker = markers[index] || {
-              sign: " ",
-              type: "context",
-            };
+      <div className="resume-diff-view">
+        {rows.length ? (
+          rows.map((row, index) => {
+            const cell = side === "base" ? row.base : row.target;
+            const lineNumber = side === "base" ? row.baseLine : row.targetLine;
+            const sign = side === "base" ? row.baseSign : row.targetSign;
+            const cellType = getCellType(row.type, side);
 
             return (
-              <span className={marker.type} key={index}>
-                <b>{marker.sign}</b>
-                {index + 1}
-              </span>
+              <div
+                className={`resume-diff-row ${row.type} ${cellType}`}
+                key={`${side}-${index}`}
+              >
+                <span className="resume-diff-sign">{sign}</span>
+                <span className="resume-diff-line-number">
+                  {lineNumber || ""}
+                </span>
+                <code>{cell || " "}</code>
+              </div>
             );
-          })}
-        </div>
-        <textarea
-          onChange={(event) => onChange(event.target.value)}
-          spellCheck={false}
-          value={resume?.resume || ""}
-        />
+          })
+        ) : (
+          <div className="resume-diff-empty">两个版本目前没有差异。</div>
+        )}
       </div>
     </article>
   );
 }
 
-function createLineMarkers(diffLines) {
-  const markers = {
-    base: [],
-    target: [],
-  };
+function createDiffRows(baseText, targetText) {
+  const baseLines = String(baseText || "").split("\n");
+  const targetLines = String(targetText || "").split("\n");
+  const steps = createDiffSteps(baseLines, targetLines);
+  const rows = [];
+  let pendingRemoval = null;
+  let baseLine = 1;
+  let targetLine = 1;
 
-  diffLines.forEach((line) => {
-    if (line.type === "added") {
-      markers.target.push({ sign: "+", type: "added" });
+  steps.forEach((step) => {
+    if (step.type === "removed") {
+      if (pendingRemoval) {
+        rows.push(createRemovedRow(pendingRemoval, baseLine));
+        baseLine += 1;
+      }
+      pendingRemoval = step;
       return;
     }
 
-    if (line.type === "removed") {
-      markers.base.push({ sign: "-", type: "removed" });
+    if (step.type === "added") {
+      if (pendingRemoval) {
+        rows.push(
+          createChangedRow(
+            pendingRemoval,
+            step,
+            baseLine,
+            targetLine
+          )
+        );
+        pendingRemoval = null;
+        baseLine += 1;
+        targetLine += 1;
+        return;
+      }
+
+      rows.push(createAddedRow(step, targetLine));
+      targetLine += 1;
       return;
     }
 
-    markers.base.push({ sign: " ", type: "context" });
-    markers.target.push({ sign: " ", type: "context" });
+    if (pendingRemoval) {
+      rows.push(createRemovedRow(pendingRemoval, baseLine));
+      pendingRemoval = null;
+      baseLine += 1;
+    }
+
+    rows.push(createContextRow(step, baseLine, targetLine));
+    baseLine += 1;
+    targetLine += 1;
   });
 
-  return markers;
+  if (pendingRemoval) {
+    rows.push(createRemovedRow(pendingRemoval, baseLine));
+  }
+
+  return rows;
+}
+
+function createDiffSteps(baseLines, targetLines) {
+  const lcs = Array.from({ length: baseLines.length + 1 }, () =>
+    Array(targetLines.length + 1).fill(0)
+  );
+
+  for (let baseIndex = baseLines.length - 1; baseIndex >= 0; baseIndex -= 1) {
+    for (
+      let targetIndex = targetLines.length - 1;
+      targetIndex >= 0;
+      targetIndex -= 1
+    ) {
+      lcs[baseIndex][targetIndex] =
+        baseLines[baseIndex] === targetLines[targetIndex]
+          ? lcs[baseIndex + 1][targetIndex + 1] + 1
+          : Math.max(
+              lcs[baseIndex + 1][targetIndex],
+              lcs[baseIndex][targetIndex + 1]
+            );
+    }
+  }
+
+  const steps = [];
+  let baseIndex = 0;
+  let targetIndex = 0;
+
+  while (baseIndex < baseLines.length && targetIndex < targetLines.length) {
+    if (baseLines[baseIndex] === targetLines[targetIndex]) {
+      steps.push({ type: "context", text: baseLines[baseIndex] });
+      baseIndex += 1;
+      targetIndex += 1;
+    } else if (
+      lcs[baseIndex + 1][targetIndex] >= lcs[baseIndex][targetIndex + 1]
+    ) {
+      steps.push({ type: "removed", text: baseLines[baseIndex] });
+      baseIndex += 1;
+    } else {
+      steps.push({ type: "added", text: targetLines[targetIndex] });
+      targetIndex += 1;
+    }
+  }
+
+  while (baseIndex < baseLines.length) {
+    steps.push({ type: "removed", text: baseLines[baseIndex] });
+    baseIndex += 1;
+  }
+
+  while (targetIndex < targetLines.length) {
+    steps.push({ type: "added", text: targetLines[targetIndex] });
+    targetIndex += 1;
+  }
+
+  return steps;
+}
+
+function createContextRow(step, baseLine, targetLine) {
+  return {
+    type: "context",
+    base: step.text,
+    target: step.text,
+    baseLine,
+    targetLine,
+    baseSign: " ",
+    targetSign: " ",
+  };
+}
+
+function createAddedRow(step, targetLine) {
+  return {
+    type: "added",
+    base: "",
+    target: step.text,
+    baseLine: null,
+    targetLine,
+    baseSign: " ",
+    targetSign: "+",
+  };
+}
+
+function createRemovedRow(step, baseLine) {
+  return {
+    type: "removed",
+    base: step.text,
+    target: "",
+    baseLine,
+    targetLine: null,
+    baseSign: "-",
+    targetSign: " ",
+  };
+}
+
+function createChangedRow(baseStep, targetStep, baseLine, targetLine) {
+  return {
+    type: "changed",
+    base: baseStep.text,
+    target: targetStep.text,
+    baseLine,
+    targetLine,
+    baseSign: "-",
+    targetSign: "+",
+  };
+}
+
+function getCellType(type, side) {
+  if (type === "changed") {
+    return side === "base" ? "removed" : "added";
+  }
+
+  if (type === "removed" && side === "base") return "removed";
+  if (type === "added" && side === "target") return "added";
+  return "context";
 }

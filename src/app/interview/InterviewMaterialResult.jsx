@@ -6,12 +6,18 @@ import {
   ReadOutlined,
 } from "@ant-design/icons";
 import { Button, Empty, Tag } from "antd";
+import { useEffect, useState } from "react";
 
 export default function InterviewMaterialResult({
+  loading = false,
   materialResult,
   downloading = false,
   onDownload,
 }) {
+  if (loading) {
+    return <InterviewLoadingState />;
+  }
+
   if (!materialResult) {
     return (
       <div className="analyze-empty">
@@ -82,6 +88,44 @@ export default function InterviewMaterialResult({
           </article>
         ))}
       </section>
+    </div>
+  );
+}
+
+function InterviewLoadingState() {
+  const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setStep((current) => (current < 10 ? current + 1 : current));
+    }, 1500);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const percent = step * 10;
+
+  return (
+    <div className="interview-loading">
+      <div className="interview-loading-badge">{step}/10</div>
+      <h2>正在生成面试素材</h2>
+      <p>正在拆解岗位重点、组织提问方向，并生成一问一答一建议。</p>
+      <div className="interview-loading-track">
+        <div
+          className="interview-loading-bar"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <div className="interview-loading-grid">
+        {Array.from({ length: 10 }).map((_, index) => (
+          <span
+            className={index < step ? "done" : ""}
+            key={index}
+          >
+            {String(index + 1).padStart(2, "0")}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

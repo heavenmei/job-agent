@@ -28,3 +28,6 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+
+
+// pm2 start npm --name "job-agent" -- start

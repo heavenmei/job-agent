@@ -100,7 +100,7 @@ export default function DashboardPage() {
           />
           <div className="home-hero-overlay" />
           <div className="home-hero-content">
-            <Tag bordered={false} className="home-hero-tag">
+            <Tag variant="filled" className="home-hero-tag">
               Job Agent
             </Tag>
             <h1>把找工作这件事，整理成一条清晰、连续、可复用的工作流</h1>

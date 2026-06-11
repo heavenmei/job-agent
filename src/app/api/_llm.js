@@ -1,27 +1,44 @@
 import OpenAI from "openai";
+import { defaultLlmSettings } from "../config";
+import { normalizeLlmSettings } from "../llmSettings";
 
-let client;
+const clientCache = new Map();
 
-function getClient() {
-  if (!process.env.DASHSCOPE_API_KEY) {
-    const error = new Error("DASHSCOPE_API_KEY is not configured");
+function getClient(settings) {
+  const apiKey = settings.apiKey || process.env.DASHSCOPE_API_KEY;
+  const baseURL = settings.baseURL || process.env.DASHSCOPE_API_BASE;
+  const timeout = settings.timeout * 1000;
+
+  if (!apiKey) {
+    const error = new Error("请先配置 API_KEY ");
     error.status = 500;
     throw error;
   }
 
-  client ??= new OpenAI({
-    apiKey: process.env.DASHSCOPE_API_KEY,
-    baseURL: process.env.DASHSCOPE_API_BASE,
-    timeout: 120000,
-  });
+  const cacheKey = JSON.stringify([apiKey, baseURL, timeout]);
 
-  return client;
+  if (!clientCache.has(cacheKey)) {
+    clientCache.set(
+      cacheKey,
+      new OpenAI({
+        apiKey,
+        baseURL,
+        timeout,
+      })
+    );
+  }
+
+  return clientCache.get(cacheKey);
 }
 
 export async function callLLM({
   messages,
-  model = process.env.DASHSCOPE_MODEL || "qwen3.5-plus-2026-04-20",
-  temperature = 0,
+  llmSettings,
+  model,
+  temperature,
+  topP,
+  maxTokens,
+  enableThinking,
 } = {}) {
   if (!Array.isArray(messages) || messages.length === 0) {
     const error = new Error("messages is required");
@@ -29,14 +46,27 @@ export async function callLLM({
     throw error;
   }
 
-  try {
-    console.log("🚀 ~ callLLM:", model);
+  const settings = normalizeLlmSettings({
+    ...llmSettings,
+    model: model ?? llmSettings?.model ?? process.env.DASHSCOPE_MODEL,
+    temperature: temperature ?? llmSettings?.temperature,
+    topP: topP ?? llmSettings?.topP,
+    maxTokens: maxTokens ?? llmSettings?.maxTokens,
+    enableThinking: enableThinking ?? llmSettings?.enableThinking,
+    timeout: llmSettings?.timeout ?? defaultLlmSettings.timeout,
+    baseURL: llmSettings?.baseURL ?? process.env.DASHSCOPE_API_BASE,
+  });
 
-    const completion = await getClient().chat.completions.create({
-      model,
+  try {
+    console.log("🚀 ~ callLLM:", settings.model);
+
+    const completion = await getClient(settings).chat.completions.create({
+      model: settings.model,
       messages,
-      temperature,
-      enable_thinking: false,
+      temperature: settings.temperature,
+      top_p: settings.topP,
+      max_tokens: settings.maxTokens,
+      enable_thinking: settings.enableThinking,
     });
 
     const content = completion.choices?.[0]?.message?.content || "";

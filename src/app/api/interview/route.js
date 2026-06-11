@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function POST(request) {
   try {
-    const { jd, resume, resumeHighlight } = await readJson(request);
+    const { jd, resume, resumeHighlight, llmSettings } = await readJson(request);
 
     if (!resume || typeof resume !== "string" || !resume.trim()) {
       const error = new Error("请先选择或上传简历");
@@ -20,7 +20,8 @@ export async function POST(request) {
     }
 
     const content = await callLLM({
-      temperature: 0.3,
+      llmSettings,
+      temperature: llmSettings?.temperature ?? 0.3,
       messages: [
         {
           role: "system",

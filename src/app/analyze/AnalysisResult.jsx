@@ -23,6 +23,7 @@ const dimensionColors = {
 
 export default function AnalysisResult({
   analysis,
+  loading = false,
   onApplyRewriteSuggestions,
   rewriteApplying = false,
 }) {
@@ -41,6 +42,10 @@ export default function AnalysisResult({
       cancelled = true;
     };
   }, [suggestions]);
+
+  if (loading) {
+    return <AnalysisLoadingState />;
+  }
 
   if (!analysis) {
     return (
@@ -221,6 +226,71 @@ export default function AnalysisResult({
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+const ANALYSIS_LOADING_STEPS = [
+  "简历技能分析",
+  "关键词命中 ATS分析",
+  "简历自身优势分析",
+  "简历自身短板分析",
+  "优化改写建议",
+  "岗位匹配度",
+];
+
+function AnalysisLoadingState() {
+  const [activeStep, setActiveStep] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveStep((current) =>
+        current < ANALYSIS_LOADING_STEPS.length - 1 ? current + 1 : current
+      );
+    }, 1500);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const percent = Math.round(((activeStep + 1) / ANALYSIS_LOADING_STEPS.length) * 100);
+
+  return (
+    <div className="analysis-loading">
+      <header className="analysis-loading-header">
+        <div>
+          <h2>正在生成岗位分析</h2>
+          <p>正在分阶段整理匹配度、ATS、优劣势和改写建议。</p>
+        </div>
+        <strong>{percent}%</strong>
+      </header>
+
+      <Progress percent={percent} showInfo={false} strokeColor="#5f55d8" />
+
+      <div className="analysis-loading-steps">
+        {ANALYSIS_LOADING_STEPS.map((step, index) => {
+          const status =
+            index < activeStep ? "done" : index === activeStep ? "active" : "pending";
+
+          return (
+            <article
+              className={`analysis-loading-step ${status}`}
+              key={step}
+            >
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3>{step}</h3>
+                <p>
+                  {status === "done"
+                    ? "已完成"
+                    : status === "active"
+                      ? "正在处理中..."
+                      : "等待执行"}
+                </p>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
