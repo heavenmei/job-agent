@@ -247,7 +247,7 @@ function AnalysisLoadingState() {
       setActiveStep((current) =>
         current < ANALYSIS_LOADING_STEPS.length - 1 ? current + 1 : current
       );
-    }, 1500);
+    }, 3000);
 
     return () => window.clearInterval(timer);
   }, []);

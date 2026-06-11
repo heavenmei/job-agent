@@ -102,6 +102,7 @@ export default function ResumeDisplay({
     const nextItems = updateResumeItem(effectiveResumeItems, targetItem.id, {
       resume: value || "",
       highlight: [],
+      jobCategories: [],
       matchAnalysis: {},
     });
 
@@ -159,6 +160,7 @@ export default function ResumeDisplay({
         activeResume.id,
         {
           highlight: data.highlights || [],
+          jobCategories: data.jobCategories || [],
         }
       );
 

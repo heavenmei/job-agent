@@ -27,7 +27,7 @@ const categoryMatchers = {
 export async function listJobs(searchParams = new URLSearchParams()) {
   const params = normalizeParams(searchParams);
   const filtered = jobs
-    .filter((job) => matchesCategory(job, params.category))
+    .filter((job) => matchesCategory(job, params.category, params.categoryKeywords))
     .filter((job) => matchesCohort(job, params.cohort))
     .filter((job) => matchesDegree(job, params.degree))
     .filter((job) => matchesMajor(job, params.major))
@@ -122,7 +122,11 @@ export async function callLlm(body = {}) {
 function normalizeParams(searchParams) {
   const get = (key, fallback = "") => searchParams.get(key) || fallback;
   return {
-    category: get("category", "mechanical"),
+    category: get("category", "all"),
+    categoryKeywords: get("categoryKeywords", "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
     cohort: get("cohort", "26届"),
     degree: get("degree", "本科可投"),
     major: get("major", "推荐机械"),
@@ -158,8 +162,15 @@ function haystack(job) {
   ].join(" ");
 }
 
-function matchesCategory(job, category) {
-  if (!category || category === "broad") return true;
+function matchesCategory(job, category, categoryKeywords = []) {
+  console.log("🚀 ~ matchesCategory ~ category:", category)
+  if (!category || category === "all" || category === "broad") return true;
+  if (categoryKeywords.length) {
+    const text = haystack(job).toLowerCase();
+    return categoryKeywords.some((keyword) =>
+      text.includes(String(keyword).toLowerCase())
+    );
+  }
   if (category === "stateOwned") return job.companyTag?.includes("国企");
   return (categoryMatchers[category] || categoryMatchers.mechanical).test(
     haystack(job)

@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import ResumeDisplay from "../components/ResumeDisplay";
 import {
-  categoryTabs,
   filterRows,
   defaultFilters,
   pendingAnalyzeJobKey,
@@ -16,13 +15,18 @@ import {
   sourceCards,
   apiSourceIds,
 } from "../config";
+import { getActiveResumeItem, readResumeItems } from "../storage";
 import { writeStorage } from "../util";
 
 import "./page.css";
 
 export default function JobsPage() {
   const router = useRouter();
-  const [filters, setFilters] = useState(defaultFilters);
+  const [filters, setFilters] = useState({ ...defaultFilters, category: "all" });
+  const [resumeCategories, setResumeCategories] = useState(() => {
+    if (typeof window === "undefined") return [];
+    return getActiveResumeItem(readResumeItems())?.jobCategories || [];
+  });
   const [enabledSources, setEnabledSources] = useState(
     () => new Set(sourceCards.map((source) => source.id))
   );
@@ -34,15 +38,28 @@ export default function JobsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeJob, setActiveJob] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const jobTabs = useMemo(
+    () => createJobTabs(resumeCategories),
+    [resumeCategories]
+  );
+  const activeCategory = jobTabs.some((tab) => tab.value === filters.category)
+    ? filters.category
+    : "all";
 
   const queryString = useMemo(() => {
-    const params = new URLSearchParams(filters);
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.set(key, String(value));
+      }
+    });
+    params.set("category", activeCategory);
     const apiSources = [...enabledSources].filter((id) => apiSourceIds.has(id));
     if (apiSources.length) params.set("sources", apiSources.join(","));
     params.set("page", String(pagination.page));
     params.set("pageSize", String(pagination.pageSize));
     return params.toString();
-  }, [enabledSources, filters, pagination.page, pagination.pageSize]);
+  }, [activeCategory, enabledSources, filters, pagination.page, pagination.pageSize]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -128,6 +145,9 @@ export default function JobsPage() {
         <section className="rounded-lg border border-app-border bg-surface p-4 text-app-fg ">
           <ResumeDisplay
             mode="analysis"
+            onResumeItemChange={(resumeItem) =>
+              setResumeCategories(resumeItem?.jobCategories || [])
+            }
             titleNode={
               <h1 className="text-xl font-black text-app-fg">AI分析简历结果</h1>
             }
@@ -140,10 +160,10 @@ export default function JobsPage() {
         <section className="bg-surface rounded-lg overflow-hidden">
           <div className="relative flex justify-between items-end border-b border-border bg-app-bg pt-2">
             <div className="relative flex min-w-0 gap-1 overflow-x-auto scrollbar-none">
-              {categoryTabs.map((tab) => (
+              {jobTabs.map((tab) => (
                 <button
                   className={
-                    filters.category === tab.value
+                    activeCategory === tab.value
                       ? "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-primary px-3 text-base font-extrabold text-white"
                       : "h-8 flex-none rounded-t-[14px] border border-b-0 border-[#e0e4ef] bg-white px-3 text-base font-extrabold text-black"
                   }
@@ -392,6 +412,23 @@ function writePendingJob(storageKey, job) {
       createdAt: new Date().toISOString(),
     })
   );
+}
+
+function createJobTabs(resumeCategories) {
+  const tabs = [{ label: "全部", value: "all" }];
+
+  if (!Array.isArray(resumeCategories)) return tabs;
+
+  resumeCategories.forEach((item, index) => {
+    if (!item?.label) return;
+
+    tabs.push({
+      label: String(item.label).slice(0, 18),
+      value: String(item.label).slice(0, 18) || `分类${index + 1}`,
+    });
+  });
+
+  return tabs;
 }
 
 function createJobDescription(job) {

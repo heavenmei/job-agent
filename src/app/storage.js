@@ -14,6 +14,7 @@ export function createResumeItem(index, resume = "", overrides = {}) {
     updated: getToday(),
     resume,
     highlight: [],
+    jobCategories: [],
     matchAnalysis: {},
     interviewMaterials: {},
     active: index === 1,
@@ -30,6 +31,7 @@ export function createInitialResumeItem() {
     updated: "",
     resume: "",
     highlight: [],
+    jobCategories: [],
     matchAnalysis: {},
     interviewMaterials: {},
     active: true,
@@ -55,9 +57,33 @@ export function normalizeResumeItems(items) {
     active: index === activeIndex,
     resume: item.resume || "",
     highlight: Array.isArray(item.highlight) ? item.highlight : [],
+    jobCategories: normalizeJobCategories(item.jobCategories),
     matchAnalysis: normalizeMatchAnalysis(item.matchAnalysis),
     interviewMaterials: normalizeInterviewMaterials(item.interviewMaterials),
   }));
+}
+
+function normalizeJobCategories(jobCategories) {
+  if (!Array.isArray(jobCategories)) return [];
+
+  return jobCategories
+    .slice(0, 6)
+    .map((item, index) => {
+      const label = String(item?.label || `分类 ${index + 1}`).slice(0, 18);
+      const keywords = Array.isArray(item?.keywords)
+        ? item.keywords
+            .map((keyword) => String(keyword || "").trim().slice(0, 20))
+            .filter(Boolean)
+            .slice(0, 8)
+        : [];
+
+      return {
+        label,
+        value: String(item?.value || `custom-${index + 1}`).slice(0, 40),
+        keywords: keywords.length ? keywords : [label],
+      };
+    })
+    .filter((item) => item.label);
 }
 
 function normalizeMatchAnalysis(matchAnalysis) {
